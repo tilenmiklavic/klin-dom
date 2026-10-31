@@ -178,7 +178,8 @@
     "archiveBody": "It leaves your lists. Past completions stay in your stats.",
     "keep": "Keep task",
     "archived": "Task archived",
-    "loadFailed": "Couldn’t load this task"
+    "loadFailed": "Couldn’t load this task",
+    "reminderLimit": "Up to {{count}} reminders"
   },
   "reminders": {
     "at": "At due time",

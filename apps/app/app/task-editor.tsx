@@ -10,6 +10,7 @@ import { ReminderPicker } from '../src/components/tasks/ReminderPicker';
 import { useHome, useMembers, useRooms } from '../src/data/homes';
 import { useArchiveTask, useCreateTask, useTask, useUpdateTask } from '../src/data/tasks';
 import { useCurrentHome } from '../src/state/currentHome';
+import { normalizeKeys } from '../src/tasks/reminders';
 import { blankForm, buildCreate, buildPatch, formFromTask, isValidDate, TIME_RE, type FormState } from '../src/tasks/form';
 
 const HOUSEHOLD = 'household';
@@ -163,7 +164,11 @@ function EditorForm({ homeId, today, task, rooms, members, initial, close }: For
       <TextField
         label={t('editor.dueTime')}
         value={form.dueTime}
-        onChangeText={(v) => set('dueTime', v.trim())}
+        onChangeText={(v) => {
+          const dueTime = v.trim();
+          setForm((f) => ({ ...f, dueTime, reminderKeys: normalizeKeys(f.reminderKeys, TIME_RE.test(dueTime) ? dueTime : null) }));
+          setErrors({});
+        }}
         error={errors.time}
         placeholder={t('editor.anyTime')}
         keyboardType="numbers-and-punctuation"
@@ -180,7 +185,12 @@ function EditorForm({ homeId, today, task, rooms, members, initial, close }: For
         />
       </Field>
       <Field label={t('editor.reminders')}>
-        <ReminderPicker value={form.reminderKeys} onChange={(keys) => set('reminderKeys', keys)} />
+        <ReminderPicker
+          value={form.reminderKeys}
+          dueTime={TIME_RE.test(form.dueTime) ? form.dueTime : null}
+          extraOffsets={form.extraOffsets}
+          onChange={(keys) => set('reminderKeys', keys)}
+        />
       </Field>
       <TextField label={t('editor.notes')} value={form.notes} onChangeText={(v) => set('notes', v)} maxLength={500} multiline />
       <Button label={t('editor.save')} loading={saving} onPress={() => void save()} />

@@ -47,7 +47,7 @@ const mkTask = (id: string, name: string, over: Record<string, unknown> = {}) =>
 });
 const late = mkTask('t1', 'Wash the dishes', { nextDueDate: '2026-10-26', overdue: true });
 const todayTask = mkTask('t2', 'Wipe the hob');
-const weekTask = mkTask('t3', 'Change the bed', { nextDueDate: '2026-11-01', rooms: [{ id: 'r2', name: 'Bedroom', icon: 'home' }], intervalCount: 2 });
+const weekTask = mkTask('t3', 'Change the bed', { nextDueDate: '2026-11-01', rooms: [{ id: 'r2', name: 'Bedroom', icon: 'home' }], intervalCount: 2, assigneeId: 'u2' });
 const laterTask = mkTask('t4', 'Descale the kettle', {
   nextDueDate: '2026-11-09',
   intervalUnit: 'month',
@@ -82,10 +82,11 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
   if (url.includes('/homes/h1/dashboard')) return json(200, { rings: emptyRings, dueToday: [], doneToday: [] });
   if (url.includes('/homes/h1/tasks') && method === 'GET') return json(200, tasks);
   if (url.endsWith('/homes/h1/tasks') && method === 'POST') return json(201, { ...todayTask, id: 'new' });
-  if (url.endsWith('/tasks/t1/history')) return json(200, history);
   if (url.includes('/tasks/t1/history')) return json(200, history);
-  if (url.endsWith('/tasks/t1/mute') && method === 'PUT') detail = { ...detail, mutedByMe: JSON.parse(init!.body as string).muted };
+  if (url.endsWith('/tasks/t1/mute') && method === 'PUT') {
+    detail = { ...detail, mutedByMe: JSON.parse(init!.body as string).muted };
     return json(200, detail);
+  }
   if (url.endsWith('/tasks/t1') && method === 'GET') return json(200, detail);
   if (url.endsWith('/tasks/t1') && method === 'PATCH') return json(200, detail);
   if (url.endsWith('/tasks/t1') && method === 'DELETE') return new Response(null, { status: 204 });
@@ -126,6 +127,9 @@ describe('tasks list', () => {
     const order = screen.getAllByText(/Wash the dishes|Wipe the hob|Change the bed|Descale the kettle/).map((n) => n.props.children);
     expect(order).toEqual(['Wash the dishes', 'Wipe the hob', 'Change the bed', 'Descale the kettle']);
     expect(screen.getAllByText('Weekly · Kitchen')).toHaveLength(2);
+    // The avatar shows one letter, not the whole display name.
+    expect(screen.getByText('A')).toBeTruthy();
+    expect(screen.queryByText('Ana')).toBeNull();
     expect(screen.getByText('Every 2 weeks · Bedroom')).toBeTruthy();
     expect(screen.getByText('Monthly · Kitchen, Bedroom')).toBeTruthy();
   });
@@ -228,6 +232,80 @@ describe('task editor', () => {
     await press('Save task');
     await waitFor(() => expect(calls(/\/tasks\/t1$/, 'PATCH')).toHaveLength(1));
     expect(body(calls(/\/tasks\/t1$/, 'PATCH')[0]!)).toEqual({ name: 'Wash up' });
+  });
+
+  const patches = () => calls(/\/tasks\/t1$/, 'PATCH');
+  const loaded = async () => screen.findByDisplayValue('Wash the dishes');
+
+  it('sends null when the due time and assignee are cleared', async () => {
+    detail = { ...detail, dueTime: '09:00', assigneeId: 'u2' };
+    await renderAt('/task-editor?id=t1');
+    await loaded();
+    await fireEvent.changeText(screen.getByLabelText('Due time'), '');
+    await press('Household', 'radio');
+    await press('Save task');
+    await waitFor(() => expect(patches()).toHaveLength(1));
+    expect(body(patches()[0]!)).toEqual({ dueTime: null, assigneeId: null });
+  });
+
+  it('resends recomputed offsets when the due time moves under "The evening before"', async () => {
+    detail = { ...detail, reminderOffsets: [] };
+    await renderAt('/task-editor?id=t1');
+    await loaded();
+    await press('The evening before', 'checkbox');
+    await press('Save task');
+    await waitFor(() => expect(patches()).toHaveLength(1));
+    expect(body(patches()[0]!)).toEqual({ reminderOffsets: [840] });
+  });
+
+  it('recomputes the evening offset for a new due time', async () => {
+    detail = { ...detail, reminderOffsets: [840] };
+    await renderAt('/task-editor?id=t1');
+    await loaded();
+    expect(screen.getByRole('checkbox', { name: 'The evening before', checked: true })).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText('Due time'), '19:00');
+    await press('Save task');
+    await waitFor(() => expect(patches()).toHaveLength(1));
+    expect(body(patches()[0]!)).toEqual({ dueTime: '19:00', reminderOffsets: [1500] });
+  });
+
+  it.each([
+    ['Start date', '2026-02-30', 'Use the format YYYY-MM-DD'],
+    ['Due time', '25:00', 'Use the format HH:mm'],
+  ])('blocks save for an invalid %s', async (label, value, error) => {
+    await renderAt('/task-editor');
+    await fillName('Mop');
+    await press('Kitchen', 'checkbox');
+    await fireEvent.changeText(screen.getByLabelText(label), value);
+    await press('Save task');
+    expect(await screen.findByText(error)).toBeTruthy();
+    expect(calls(/\/homes\/h1\/tasks$/, 'POST')).toHaveLength(0);
+  });
+
+  it('refuses a sixth reminder and says why', async () => {
+    detail = { ...detail, reminderOffsets: [0, 60, 180, 1440, 5000] };
+    await renderAt('/task-editor?id=t1');
+    await loaded();
+    expect(await screen.findByText('Up to 5 reminders')).toBeTruthy();
+    await press('The evening before', 'checkbox');
+    expect(screen.getByRole('checkbox', { name: 'The evening before', checked: false })).toBeTruthy();
+    await press('Save task');
+    await waitFor(() => expect(screen.queryByText('Task saved')).toBeTruthy());
+    expect(patches()).toHaveLength(0);
+  });
+
+  it('keeps one chip for presets that resolve to the same offset', async () => {
+    await renderAt('/task-editor');
+    await fillName('Mop');
+    await press('Kitchen', 'checkbox');
+    await fireEvent.changeText(screen.getByLabelText('Due time'), '18:00');
+    await press('1 day before', 'checkbox');
+    await press('The evening before', 'checkbox');
+    expect(screen.getByRole('checkbox', { name: '1 day before', checked: false })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'The evening before', checked: true })).toBeTruthy();
+    await press('Save task');
+    await waitFor(() => expect(calls(/\/homes\/h1\/tasks$/, 'POST')).toHaveLength(1));
+    expect(body(calls(/\/homes\/h1\/tasks$/, 'POST')[0]!).reminderOffsets).toEqual([1440]);
   });
 
   it('archives after confirming', async () => {

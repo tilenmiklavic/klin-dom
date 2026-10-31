@@ -27,3 +27,19 @@ export function keysFromOffsets(offsets: number[], dueTime: string | null): { ke
 export function offsetsFromKeys(keys: ReminderKey[], dueTime: string | null, extra: number[] = []): number[] {
   return [...new Set([...keys.map((k) => presetMinutes(k, dueTime)), ...extra])].sort((a, b) => a - b);
 }
+
+export const MAX_REMINDERS = 5;
+
+/** Drops keys whose offset another key already gives (the last one pressed wins), so chips match what is saved. */
+export function normalizeKeys(keys: ReminderKey[], dueTime: string | null): ReminderKey[] {
+  const seen = new Set<number>();
+  return [...keys]
+    .reverse()
+    .filter((k) => {
+      const m = presetMinutes(k, dueTime);
+      if (seen.has(m)) return false;
+      seen.add(m);
+      return true;
+    })
+    .reverse();
+}
