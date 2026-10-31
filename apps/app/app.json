@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "KlinDom",
+    "slug": "klindom",
+    "version": "0.0.0",
+    "scheme": "klindom",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router", "expo-font"]
+  }
+}

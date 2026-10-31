@@ -85,6 +85,8 @@ export function createApiClient(opts: ApiClientOptions) {
 
   return {
     bootstrap: () => post<BootstrapDto>('/me/bootstrap'),
+    /** Local development only: exists when the API runs with AUTH_MODE=dev. */
+    devToken: (input: { sub: string; name?: string; email?: string }) => post<{ token: string }>('/dev/token', input),
     updateMe: (patchBody: { displayName: string }) => patch<UserDto>('/me', patchBody),
     deleteMe: () => del('/me'),
 

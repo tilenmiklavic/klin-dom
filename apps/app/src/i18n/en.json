@@ -1,0 +1,39 @@
+{
+  "welcome": {
+    "greeting": "Let’s make home shine.",
+    "orbLabel": "Get started",
+    "google": "Continue with Google",
+    "email": "Continue with email",
+    "devName": "Dev name",
+    "devSignIn": "Dev sign-in"
+  },
+  "email": {
+    "title": "What’s your email?",
+    "hint": "We’ll send you a 6-digit code. No password needed.",
+    "label": "Email",
+    "placeholder": "you@example.com",
+    "send": "Send code",
+    "invalid": "Enter a valid email address."
+  },
+  "code": {
+    "title": "Check your inbox",
+    "hint": "Enter the 6-digit code we sent to {{email}}.",
+    "label": "6-digit code",
+    "verify": "Verify",
+    "resend": "Send a new code",
+    "resent": "New code sent.",
+    "invalid": "That code didn’t work. Try again or send a new one."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again."
+  },
+  "onboarding": {
+    "title": "Set up your home"
+  },
+  "tabs": {
+    "today": "Today"
+  },
+  "join": {
+    "title": "Joining a home"
+  }
+}

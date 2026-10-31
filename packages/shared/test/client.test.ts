@@ -102,3 +102,13 @@ it('maps a network failure to ApiError 0 network', async () => {
   const api = createApiClient({ baseUrl: 'http://api', getToken: async () => 't', fetchImpl: f.impl });
   await expect(api.bootstrap()).rejects.toMatchObject({ status: 0, code: 'network' });
 });
+
+it('mints a dev token without an Authorization header', async () => {
+  const f = fakeFetch([json(200, { token: 'jwt' })]);
+  const api = createApiClient({ baseUrl: 'http://api', getToken: async () => null, fetchImpl: f.impl });
+  await expect(api.devToken({ sub: 'dev:tilen', name: 'Tilen' })).resolves.toEqual({ token: 'jwt' });
+  expect(f.calls[0]!.url).toBe('http://api/dev/token');
+  expect(f.calls[0]!.init.method).toBe('POST');
+  expect(header(f.calls[0]!, 'Authorization')).toBeUndefined();
+  expect(JSON.parse(f.calls[0]!.init.body as string)).toEqual({ sub: 'dev:tilen', name: 'Tilen' });
+});
