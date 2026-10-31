@@ -67,3 +67,39 @@ export function authed(app: Hono<any>, token: string) {
     del: (path: string, body?: unknown) => send('DELETE', path, body),
   };
 }
+
+/** Signs in a user (creating the row) and returns their client and id. */
+export async function signIn(app: Hono<any>, sub: string, name = sub) {
+  const client = authed(app, await tokenFor(sub, { name }));
+  const res = await client.post('/me/bootstrap');
+  const body = (await res.json()) as { user: { id: string } };
+  return { client, id: body.user.id };
+}
+
+export async function addMember(homeId: string, userId: string): Promise<void> {
+  await getTestDb().query(`insert into home_members (home_id, user_id, role) values ($1, $2, 'member')`, [homeId, userId]);
+}
+
+/** Creates a home through the API, owned by a freshly signed-in user. */
+export async function setupHome(app: Hono<any>, name = 'Miklavič home') {
+  const owner = await signIn(app, 'owner', 'Tilen');
+  const res = await owner.client.post('/homes', { name, timezone: 'Europe/Ljubljana' });
+  const home = (await res.json()) as { id: string };
+  return { owner, homeId: home.id };
+}
+
+/** Inserts a task directly (for tests that predate or bypass the tasks API). */
+export async function insertTask(homeId: string, createdBy: string, opts: { assigneeId?: string; nextDueDate?: string } = {}) {
+  const db = getTestDb();
+  const [room] = await db.query<{ id: string }>(
+    `insert into rooms (home_id, name, icon) values ($1, 'Kitchen', 'dishes') returning id`,
+    [homeId],
+  );
+  const [task] = await db.query<{ id: string }>(
+    `insert into tasks (home_id, name, icon, interval_count, interval_unit, next_due_date, created_by, assignee_id)
+     values ($1, 'Dishes', 'dishes', 1, 'day', $2, $3, $4) returning id`,
+    [homeId, opts.nextDueDate ?? '2026-10-31', createdBy, opts.assigneeId ?? null],
+  );
+  await db.query('insert into task_rooms (task_id, room_id) values ($1, $2)', [task!.id, room!.id]);
+  return task!.id;
+}
