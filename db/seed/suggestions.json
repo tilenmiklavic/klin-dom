@@ -1,0 +1,84 @@
+{
+  "rooms": [
+    {
+      "key": "kitchen",
+      "name": "Kitchen",
+      "icon": "dishes",
+      "tasks": [
+        { "key": "dishes", "name": "Dishes", "icon": "dishes", "intervalCount": 1, "intervalUnit": "day" },
+        { "key": "surfaces", "name": "Wipe surfaces", "icon": "spray", "intervalCount": 2, "intervalUnit": "day" },
+        { "key": "bins", "name": "Take out bins", "icon": "bucket", "intervalCount": 3, "intervalUnit": "day" },
+        { "key": "fridge", "name": "Clean fridge", "icon": "sponge", "intervalCount": 1, "intervalUnit": "month" },
+        { "key": "oven", "name": "Clean oven", "icon": "sponge", "intervalCount": 2, "intervalUnit": "month" }
+      ]
+    },
+    {
+      "key": "bathroom",
+      "name": "Bathroom",
+      "icon": "spray",
+      "tasks": [
+        { "key": "toilet", "name": "Clean toilet", "icon": "spray", "intervalCount": 1, "intervalUnit": "week" },
+        { "key": "sink", "name": "Clean sink and mirror", "icon": "sponge", "intervalCount": 1, "intervalUnit": "week" },
+        { "key": "shower", "name": "Scrub shower", "icon": "spray", "intervalCount": 2, "intervalUnit": "week" },
+        { "key": "towels", "name": "Change towels", "icon": "laundry", "intervalCount": 1, "intervalUnit": "week" }
+      ]
+    },
+    {
+      "key": "bedroom",
+      "name": "Bedroom",
+      "icon": "laundry",
+      "tasks": [
+        { "key": "bedsheets", "name": "Change bedsheets", "icon": "laundry", "intervalCount": 1, "intervalUnit": "week" },
+        { "key": "dust", "name": "Dust surfaces", "icon": "broom", "intervalCount": 2, "intervalUnit": "week" }
+      ]
+    },
+    {
+      "key": "living",
+      "name": "Living room",
+      "icon": "vacuum",
+      "tasks": [
+        { "key": "dust", "name": "Dust surfaces", "icon": "broom", "intervalCount": 1, "intervalUnit": "week" },
+        { "key": "tidy", "name": "Tidy up", "icon": "checklist", "intervalCount": 2, "intervalUnit": "day" }
+      ]
+    },
+    {
+      "key": "hallway",
+      "name": "Hallway",
+      "icon": "broom",
+      "tasks": [
+        { "key": "shoes", "name": "Tidy shoes", "icon": "checklist", "intervalCount": 1, "intervalUnit": "week" }
+      ]
+    },
+    {
+      "key": "balcony",
+      "name": "Balcony",
+      "icon": "window",
+      "tasks": [
+        { "key": "sweep", "name": "Sweep balcony", "icon": "broom", "intervalCount": 2, "intervalUnit": "week" },
+        { "key": "plants", "name": "Water plants", "icon": "bucket", "intervalCount": 3, "intervalUnit": "day" }
+      ]
+    },
+    {
+      "key": "office",
+      "name": "Office",
+      "icon": "checklist",
+      "tasks": [
+        { "key": "desk", "name": "Clear desk", "icon": "checklist", "intervalCount": 1, "intervalUnit": "week" }
+      ]
+    },
+    {
+      "key": "laundry",
+      "name": "Laundry room",
+      "icon": "laundry",
+      "tasks": [
+        { "key": "laundry", "name": "Laundry", "icon": "laundry", "intervalCount": 3, "intervalUnit": "day" },
+        { "key": "machine", "name": "Clean washing machine", "icon": "sponge", "intervalCount": 1, "intervalUnit": "month" }
+      ]
+    }
+  ],
+  "sharedTasks": [
+    { "key": "vacuum", "name": "Vacuum", "icon": "vacuum", "intervalCount": 1, "intervalUnit": "week", "roomKeys": ["living", "bedroom", "hallway", "office"] },
+    { "key": "mop", "name": "Mop floors", "icon": "bucket", "intervalCount": 2, "intervalUnit": "week", "roomKeys": ["kitchen", "bathroom", "hallway"] },
+    { "key": "windows", "name": "Clean windows", "icon": "window", "intervalCount": 4, "intervalUnit": "week", "roomKeys": ["kitchen", "bedroom", "living", "office"] }
+  ]
+}

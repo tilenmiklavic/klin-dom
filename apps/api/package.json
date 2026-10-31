@@ -1,0 +1,27 @@
+{
+  "name": "@klindom/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "esbuild src/server.ts --bundle --platform=node --target=node22 --format=cjs --external:pg-native --outfile=dist/server.cjs",
+    "start": "node dist/server.cjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@klindom/shared": "workspace:*",
+    "hono": "^4.13.14",
+    "jose": "^6.2.14",
+    "luxon": "^3.7.2",
+    "pg": "^8.23.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.6",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2"
+  }
+}
