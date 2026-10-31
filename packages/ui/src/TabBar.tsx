@@ -18,10 +18,10 @@ export function TabBar({ items, active, onChange }: TabBarProps) {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: tokens.space[2],
+        gap: tokens.space[2],
+        padding: 6,
         borderRadius: tokens.radius.pill,
         backgroundColor: tokens.color.night,
-        boxShadow: tokens.shadow.float,
       }}
     >
       {items.map((item) => {
@@ -34,15 +34,17 @@ export function TabBar({ items, active, onChange }: TabBarProps) {
             accessibilityState={{ selected }}
             onPress={() => onChange(item.id)}
             style={{
-              height: 44,
-              minWidth: 44,
+              height: 52,
+              minWidth: 52,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               gap: tokens.space[2],
-              paddingHorizontal: selected ? tokens.space[4] : tokens.space[3],
+              paddingLeft: selected ? tokens.space[5] : 0,
+              paddingRight: selected ? tokens.space[6] : 0,
               borderRadius: tokens.radius.pill,
-              backgroundColor: selected ? tokens.color.surfaceRaised : 'transparent',
+              backgroundColor: selected ? tokens.color.surfaceRaised : tokens.color.nightRaised,
+              boxShadow: selected ? tokens.shadow.float : undefined,
             }}
           >
             <Icon name={item.icon} size={22} color={selected ? 'brand' : 'onNightMuted'} />

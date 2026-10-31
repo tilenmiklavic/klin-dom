@@ -36,6 +36,28 @@ describe('Button', () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 
+  it('dims to 0.45 and drops the shadow when disabled', async () => {
+    await render(<Button label="Save task" onPress={jest.fn()} disabled />);
+    const btn = screen.getByRole('button', { name: 'Save task' });
+    expect(btn).toHaveStyle({ opacity: 0.45 });
+    expect(btn).not.toHaveStyle({ boxShadow: expect.anything() });
+  });
+
+  it('uses design-system fills for secondary and soft', async () => {
+    await render(
+      <>
+        <Button variant="secondary" label="Second" onPress={jest.fn()} />
+        <Button variant="soft" label="Softy" onPress={jest.fn()} />
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Second' })).toHaveStyle({
+      backgroundColor: '#ffffff',
+    });
+    expect(screen.getByRole('button', { name: 'Softy' })).toHaveStyle({
+      backgroundColor: '#ef8a6c',
+    });
+  });
+
   it('ignores presses when loading', async () => {
     const onPress = jest.fn();
     await render(<Button label="Save task" onPress={onPress} loading />);

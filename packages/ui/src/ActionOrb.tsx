@@ -25,44 +25,31 @@ const dims: Record<OrbSize, { orb: number; icon: number }> = {
 };
 
 export function ActionOrb({ size = 'md', icon = 'sparkle', label, onPress, halo }: ActionOrbProps) {
-  const press = usePressScale();
+  const press = usePressScale(0.94);
   const { orb, icon: iconSize } = dims[size];
-  const ring1 = orb + tokens.space[4];
-  const ring2 = orb + tokens.space[8];
-  const outer = halo ? ring2 : orb;
+  // Design system halo: surface pad (18), brandHalo ring (14), brandHaloFaint ring (to 30).
+  const pad = 18;
+  const ringNear = 14;
+  const ringFar = 30;
+  const padded = orb + pad * 2;
+  const outer = halo ? padded + ringFar * 2 : orb;
+  const disc = (diameter: number, color: string) => ({
+    position: 'absolute' as const,
+    width: diameter,
+    height: diameter,
+    borderRadius: diameter / 2,
+    backgroundColor: color,
+  });
   return (
-    <View
-      style={{
-        width: outer,
-        height: outer,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
+    <View style={{ width: outer, height: outer, alignItems: 'center', justifyContent: 'center' }}>
       {halo ? (
         <>
           <View
             pointerEvents="none"
-            style={{
-              position: 'absolute',
-              width: ring2,
-              height: ring2,
-              borderRadius: ring2 / 2,
-              backgroundColor: tokens.color.brandHalo,
-              opacity: 0.4,
-            }}
+            style={disc(padded + ringFar * 2, tokens.color.brandHaloFaint)}
           />
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              width: ring1,
-              height: ring1,
-              borderRadius: ring1 / 2,
-              backgroundColor: tokens.color.brandHalo,
-              opacity: 0.7,
-            }}
-          />
+          <View pointerEvents="none" style={disc(padded + ringNear * 2, tokens.color.brandHalo)} />
+          <View pointerEvents="none" style={disc(padded, tokens.color.surface)} />
         </>
       ) : null}
       <AnimatedPressable

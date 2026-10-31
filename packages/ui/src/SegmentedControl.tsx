@@ -14,7 +14,8 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
       accessibilityRole="tablist"
       style={{
         flexDirection: 'row',
-        padding: tokens.space[1],
+        padding: 6,
+        gap: tokens.space[1],
         borderRadius: tokens.radius.pill,
         backgroundColor: tokens.color.surfaceSunken,
         boxShadow: tokens.shadow.inset,
@@ -31,7 +32,8 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
             onPress={() => onChange(o.value)}
             style={{
               flex: 1,
-              height: 36,
+              height: 40,
+              paddingHorizontal: tokens.space[6],
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: tokens.radius.pill,
@@ -39,7 +41,11 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
               boxShadow: selected ? tokens.shadow.float : undefined,
             }}
           >
-            <KText variant="button" color={selected ? 'ink' : 'inkMuted'}>
+            <KText
+              variant="button"
+              color={selected ? 'ink' : 'inkMuted'}
+              style={selected ? undefined : tokens.type.body}
+            >
               {o.label}
             </KText>
           </Pressable>

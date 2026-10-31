@@ -5,6 +5,7 @@ describe('tokens', () => {
     expect(tokens.color.brand).toBe('#e2643f');
     expect(tokens.color.onBrand).toBe('#2a0e06');
     expect(tokens.color.ringFresh).toBe('#8a8a8a');
+    expect(tokens.color.brandHaloFaint).toBe('#f4e4de');
   });
 
   it('converts display letterSpacing from em to px', () => {

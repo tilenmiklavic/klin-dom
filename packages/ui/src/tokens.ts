@@ -33,6 +33,7 @@ export const tokens = {
     brandStrong: '#b84424',
     brandSoft: '#ef8a6c',
     brandHalo: '#f6c9b9',
+    brandHaloFaint: '#f4e4de',
     onBrand: '#2a0e06',
     night: '#3d3d3d',
     nightRaised: '#575757',
