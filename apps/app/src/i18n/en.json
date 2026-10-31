@@ -4,6 +4,7 @@
     "orbLabel": "Get started",
     "google": "Continue with Google",
     "email": "Continue with email",
+    "devDefaultName": "Dev",
     "devName": "Dev name",
     "devSignIn": "Dev sign-in"
   },
@@ -23,6 +24,12 @@
     "resend": "Send a new code",
     "resent": "New code sent.",
     "invalid": "That code didn’t work. Try again or send a new one."
+  },
+  "gate": {
+    "errorTitle": "Couldn’t reach KlinDom",
+    "errorBody": "Check your connection and try again.",
+    "retry": "Try again",
+    "signOut": "Sign out"
   },
   "errors": {
     "generic": "Something went wrong. Please try again."

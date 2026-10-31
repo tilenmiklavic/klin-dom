@@ -46,11 +46,12 @@ const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 let bootstrapResponses: Response[] = [];
-const fetchMock = jest.fn(async (url: string, _init?: RequestInit) => {
+const defaultFetch = async (url: string, _init?: RequestInit) => {
   if (url.endsWith('/me/bootstrap')) return bootstrapResponses.shift() ?? json(200, { user, homes: [] });
   if (url.endsWith('/dev/token')) return json(200, { token: 'dev-token' });
   return json(404, { error: { code: 'not_found', message: 'nope' } });
-});
+};
+const fetchMock = jest.fn(defaultFetch);
 
 const APP = path.resolve(__dirname, '../app');
 // RNTL 14 renders asynchronously: the router helpers (getPathname...) live on the returned promise itself.
@@ -69,6 +70,7 @@ beforeEach(async () => {
   mockAuth.listeners.clear();
   bootstrapResponses = [];
   jest.clearAllMocks();
+  fetchMock.mockImplementation(defaultFetch);
   mockAuth.refresh.mockImplementation(async () => null);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
@@ -169,6 +171,54 @@ describe('expired session (Review Focus 4)', () => {
       .filter(([u]) => u.endsWith('/me/bootstrap'))
       .map(([, init]) => (init!.headers as Record<string, string>)['Authorization']);
     expect(auths).toEqual(['Bearer stale', 'Bearer fresh']);
+  });
+});
+
+describe('auth gate transitions', () => {
+  it('never renders tab content after sign-out, and lands on Welcome', async () => {
+    mockAuth.token = 'tok';
+    bootstrapResponses = [json(200, { user, homes })];
+    await renderApp();
+    expect(await screen.findByText('Today')).toBeTruthy();
+    await act(async () => {
+      mockAuth.setToken(null);
+    });
+    // Synchronously after the status flip: the protected screen is hidden, not merely covered.
+    expect(screen.queryByText('Today')).toBeNull();
+    expect(await screen.findByText('Let’s make home shine.')).toBeTruthy();
+    expect(app.getPathname()).toBe('/welcome');
+  });
+
+  it('shows an error state when bootstrap fails, retries, then routes to the tabs', async () => {
+    mockAuth.token = 'tok';
+    bootstrapResponses = [];
+    const { ApiError } = jest.requireActual('@klindom/shared');
+    let fail = true;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith('/me/bootstrap')) {
+        if (fail) throw new ApiError(0, 'network', 'down');
+        return json(200, { user, homes });
+      }
+      return json(404, {});
+    });
+    await renderApp();
+    expect(await screen.findByText('Couldn’t reach KlinDom', undefined, { timeout: 5000 })).toBeTruthy();
+    expect(screen.queryByText('Today')).toBeNull();
+    fail = false;
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText('Today')).toBeTruthy();
+    expect(screen.queryByText('Couldn’t reach KlinDom')).toBeNull();
+    expect(app.getPathname()).toBe('/');
+  });
+
+  it('can sign out from the error state', async () => {
+    mockAuth.token = 'tok';
+    fetchMock.mockImplementation(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await renderApp();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Sign out' }, { timeout: 5000 }));
+    expect(await screen.findByText('Let’s make home shine.')).toBeTruthy();
   });
 });
 

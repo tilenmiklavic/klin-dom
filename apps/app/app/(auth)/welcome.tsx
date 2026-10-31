@@ -12,7 +12,7 @@ export default function Welcome() {
   const toast = useToast();
   const { signInWithGoogle, signInDev } = useAuth();
   const [busy, setBusy] = useState(false);
-  const [devName, setDevName] = useState('Dev');
+  const [devName, setDevName] = useState(t('welcome.devDefaultName'));
   const isDev = getConfig().authMode === 'dev';
 
   const run = async (action: () => Promise<void>) => {

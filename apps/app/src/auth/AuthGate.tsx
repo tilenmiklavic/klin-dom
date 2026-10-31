@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { tokens } from '@klindom/ui';
+import { useTranslation } from 'react-i18next';
+import { Button, KText, tokens } from '@klindom/ui';
 import { useBootstrap } from '../data/useBootstrap';
 import { useAuth } from './AuthProvider';
 import { pendingInvite } from './pendingInvite';
@@ -12,7 +13,8 @@ import { pendingInvite } from './pendingInvite';
  * A pending invite code (saved by /join/[code]) takes the user to the join screen right after sign-in.
  */
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { t } = useTranslation();
+  const { status, signOut } = useAuth();
   const bootstrap = useBootstrap();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -48,11 +50,46 @@ export function AuthGate({ children }: { children: ReactNode }) {
     };
   }, [status, homes, group, router]);
 
-  const ready = status === 'signedOut' || (status === 'signedIn' && !bootstrap.isPending);
+  // Show children only when the current route is where the session state says the user belongs;
+  // otherwise hide them (kept mounted so navigation still works) so protected screens never flash.
+  const failed = status === 'signedIn' && bootstrap.isError && !homes;
+  let belongs = false;
+  if (status === 'signedOut') belongs = group === '(auth)';
+  else if (status === 'signedIn' && homes) {
+    belongs = homes.length === 0 ? group === '(onboarding)' || group === 'join' : group !== '(auth)' && group !== '(onboarding)';
+  }
   return (
     <>
-      {children}
-      {ready ? null : <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: tokens.color.surface }]} />}
+      <View style={belongs ? { flex: 1 } : { display: 'none' }}>{children}</View>
+      {belongs ? null : (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            backgroundColor: tokens.color.surface,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: tokens.space[6],
+            gap: tokens.space[4],
+          }}
+        >
+          {failed ? (
+            <>
+              <KText variant="title" style={{ textAlign: 'center' }}>
+                {t('gate.errorTitle')}
+              </KText>
+              <KText variant="body" color="inkMuted" style={{ textAlign: 'center' }}>
+                {t('gate.errorBody')}
+              </KText>
+              <Button label={t('gate.retry')} loading={bootstrap.isFetching} onPress={() => void bootstrap.refetch()} />
+              <Button variant="chip" label={t('gate.signOut')} onPress={() => void signOut()} />
+            </>
+          ) : null}
+        </View>
+      )}
     </>
   );
 }
