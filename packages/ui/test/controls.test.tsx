@@ -107,3 +107,20 @@ describe('TabBar', () => {
     expect(onChange).toHaveBeenCalledWith('rooms');
   });
 });
+
+describe('Icon on web', () => {
+  // react-native-svg forwards unknown props to the DOM <svg>, which makes React warn
+  // ("does not recognize importantForAccessibility") and trips the Expo dev error toast.
+  it('keeps accessibility props off the Svg element', async () => {
+    await render(<Icon name="home" title="Home" />);
+    const walk = (n: unknown): Array<{ type: string; props: Record<string, unknown> }> => {
+      if (!n || typeof n !== 'object') return [];
+      const node = n as { type?: string; props?: Record<string, unknown>; children?: unknown[] };
+      return [...(node.type ? [{ type: node.type, props: node.props ?? {} }] : []), ...(node.children ?? []).flatMap(walk)];
+    };
+    const svg = walk(screen.toJSON()).find((n) => n.type === 'RNSVGSvgView');
+    expect(svg).toBeTruthy();
+    expect(svg!.props).not.toHaveProperty('importantForAccessibility');
+    expect(svg!.props).not.toHaveProperty('accessible');
+  });
+});

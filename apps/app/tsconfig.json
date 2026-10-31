@@ -7,5 +7,5 @@
     "moduleResolution": "Bundler",
     "types": ["jest", "node"]
   },
-  "include": ["app", "src", "test", "*.d.ts"]
+  "include": ["app", "src", "test", "*.d.ts", "e2e", "playwright.config.ts"]
 }
