@@ -1,6 +1,6 @@
 import path from 'node:path';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
 const mockConfig = { apiUrl: 'http://api.test', authMode: 'supabase' as const };
 jest.mock('../src/config', () => ({ getConfig: () => mockConfig }));
@@ -18,6 +18,12 @@ jest.mock('../src/auth/supabase', () => ({
     signOut: async () => {},
   },
 }));
+
+let mockClient: import('@tanstack/react-query').QueryClient;
+jest.mock('../src/data/queryClient', () => {
+  const actual = jest.requireActual('../src/data/queryClient');
+  return { ...actual, createQueryClient: () => (mockClient = actual.createQueryClient()) };
+});
 
 import { currentHomeStore } from '../src/state/currentHome';
 
@@ -143,6 +149,23 @@ describe('rooms grid', () => {
     await press('Save order');
     await waitFor(() => expect(calls(/\/rooms\/order$/, 'POST')).toHaveLength(1));
     expect(body(calls(/\/rooms\/order$/, 'POST')[0]!)).toEqual({ roomIds: ['r2', 'r1', 'r4', 'r3'] });
+  });
+});
+
+describe('rooms grid reorder sync', () => {
+  it('reconciles the order with rooms that were archived or added meanwhile', async () => {
+    await renderAt('/rooms');
+    await screen.findByText('4 rooms · 3 fresh');
+    await fireEvent(screen.getByRole('button', { name: 'Kitchen' }), 'longPress');
+    await press('Move Kitchen down'); // Bedroom, Kitchen, Bathroom, Hall
+    // Someone archives Bathroom and adds Pantry while this screen is in reorder mode.
+    rooms = [room('r1', 'Kitchen', 0), room('r2', 'Bedroom', 1), room('r4', 'Hall', 3), room('r9', 'Pantry', 4)];
+    await act(() => mockClient.invalidateQueries({ queryKey: ['rooms', 'h1'] }));
+    await screen.findByRole('button', { name: 'Move Pantry up' });
+    expect(screen.queryByRole('button', { name: 'Move Bathroom up' })).toBeNull();
+    await press('Save order');
+    await waitFor(() => expect(calls(/\/rooms\/order$/, 'POST')).toHaveLength(1));
+    expect(body(calls(/\/rooms\/order$/, 'POST')[0]!)).toEqual({ roomIds: ['r2', 'r1', 'r4', 'r9'] });
   });
 });
 

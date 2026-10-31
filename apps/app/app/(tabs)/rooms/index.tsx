@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { localDate, type RoomDto } from '@klindom/shared';
+import { ApiError, localDate, type RoomDto } from '@klindom/shared';
 import { Button, KText, RoomCard, Screen, tokens, useToast } from '@klindom/ui';
 import { ReorderList } from '../../../src/components/rooms/ReorderList';
 import { useStatusText } from '../../../src/components/rooms/useStatusText';
 import { useHome } from '../../../src/data/homes';
 import { useReorderRooms, useRooms } from '../../../src/data/rooms';
 import { useTasks } from '../../../src/data/tasks';
+import { reconcileOrder } from '../../../src/rooms/order';
 import { summarizeRooms } from '../../../src/rooms/summary';
 import { useCurrentHome } from '../../../src/state/currentHome';
 
@@ -23,7 +24,9 @@ export default function Rooms() {
   const tasks = useTasks(homeId, 'all');
   const reorder = useReorderRooms(homeId);
   const [reordering, setReordering] = useState(false);
-  const [order, setOrder] = useState<RoomDto[]>([]);
+  const [orderIds, setOrderIds] = useState<string[]>([]);
+  // The user's order kept in step with the live list: removed rooms drop out, new ones go last.
+  const order = reconcileOrder(orderIds, rooms.data ?? []);
 
   const today = home.data ? localDate(new Date(Date.now()), home.data.timezone) : null;
   const summaries = today && rooms.data && tasks.data ? summarizeRooms(rooms.data, tasks.data, today) : null;
@@ -36,7 +39,7 @@ export default function Rooms() {
 
   const startReorder = () => {
     if (!rooms.data || rooms.data.length < 2) return;
-    setOrder(rooms.data);
+    setOrderIds(rooms.data.map((r) => r.id));
     setReordering(true);
   };
   const saveOrder = async () => {
@@ -44,8 +47,8 @@ export default function Rooms() {
     if (!unchanged) {
       try {
         await reorder.mutateAsync(order.map((r) => r.id));
-      } catch {
-        toast.show({ message: t('errors.saveFailed') });
+      } catch (e) {
+        toast.show({ message: e instanceof ApiError && (e.status === 400 || e.status === 409) ? e.message : t('errors.saveFailed') });
         return;
       }
       toast.show({ message: t('roomsTab.orderSaved') });
@@ -102,7 +105,7 @@ export default function Rooms() {
         reordering ? (
           <ReorderList
             rooms={order}
-            onChange={setOrder}
+            onChange={(next) => setOrderIds(next.map((r) => r.id))}
             onSave={() => void saveOrder()}
             onCancel={() => setReordering(false)}
             saving={reorder.isPending}
