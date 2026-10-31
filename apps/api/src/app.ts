@@ -4,6 +4,7 @@ import type { Clock } from './clock.js';
 import type { Config } from './config.js';
 import type { Db } from './db.js';
 import { errorBody, errorHandler } from './errors.js';
+import { completionRoutes } from './routes/completions.js';
 import { homeRoutes } from './routes/homes.js';
 import { inviteRoutes } from './routes/invites.js';
 import { meRoutes } from './routes/me.js';
@@ -34,6 +35,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   app.route('/', inviteRoutes(deps));
   app.route('/', roomRoutes(deps));
   app.route('/', taskRoutes(deps));
+  app.route('/', completionRoutes(deps));
   app.notFound((c) => c.json(errorBody('not_found', 'Not found'), 404));
   app.onError(errorHandler);
   return app;

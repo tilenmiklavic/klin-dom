@@ -114,3 +114,18 @@ export interface TaskDto {
   mutedByMe: boolean;
   overdue: boolean;
 }
+
+// Completions
+
+export const CompleteInput = z.object({ dueDate: IsoDateSchema.optional() });
+
+export interface CompletionDto {
+  id: string;
+  taskId: string;
+  kind: 'done' | 'skip';
+  userId: string;
+  userName: string;
+  completedAt: string;
+  dueDate: string;
+  onTime: boolean;
+}
