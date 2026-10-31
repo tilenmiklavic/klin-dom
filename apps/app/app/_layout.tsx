@@ -28,6 +28,7 @@ export default function RootLayout() {
             <AuthGate>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="task-editor" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="room-editor" options={{ presentation: 'modal' }} />
               </Stack>
             </AuthGate>
             <StatusBar style="dark" />

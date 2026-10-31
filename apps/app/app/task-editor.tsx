@@ -7,7 +7,8 @@ import { Button, ChoiceChips, KText, Screen, Sheet, TextField, tokens, useToast 
 import { Field } from '../src/components/tasks/Field';
 import { FrequencyField } from '../src/components/tasks/FrequencyField';
 import { ReminderPicker } from '../src/components/tasks/ReminderPicker';
-import { useHome, useMembers, useRooms } from '../src/data/homes';
+import { useHome, useMembers } from '../src/data/homes';
+import { useRooms } from '../src/data/rooms';
 import { useArchiveTask, useCreateTask, useTask, useUpdateTask } from '../src/data/tasks';
 import { useCurrentHome } from '../src/state/currentHome';
 import { normalizeKeys } from '../src/tasks/reminders';

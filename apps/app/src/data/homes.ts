@@ -65,14 +65,3 @@ export function useMembers(homeId: string | null) {
     refetchInterval: false,
   });
 }
-
-export function useRooms(homeId: string | null) {
-  const api = useApi();
-  return useQuery({
-    queryKey: ['rooms', homeId],
-    queryFn: () => api.listRooms(homeId!),
-    enabled: homeId !== null,
-    staleTime: 60_000,
-    refetchInterval: false,
-  });
-}

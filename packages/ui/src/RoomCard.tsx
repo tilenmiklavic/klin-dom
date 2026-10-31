@@ -12,6 +12,7 @@ export interface RoomCardProps {
   status: string;
   statusTone?: 'muted' | 'due';
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
 export function RoomCard({
@@ -21,12 +22,14 @@ export function RoomCard({
   status,
   statusTone = 'muted',
   onPress,
+  onLongPress,
 }: RoomCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={name}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={{
         padding: tokens.space[4],
         gap: tokens.space[3],
