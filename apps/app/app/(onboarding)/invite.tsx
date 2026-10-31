@@ -1,15 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { Platform, Share, View } from 'react-native';
+import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
-import { Button, KText, ListGroup, ListRow, Screen, tokens, useToast } from '@klindom/ui';
+import { Button, KText, ListGroup, ListRow, Screen, tokens } from '@klindom/ui';
 import { useCreateInvite } from '../../src/data/invites';
+import { useShareInvite } from '../../src/invite/useShareInvite';
 
 export default function Invite() {
   const { t } = useTranslation();
   const router = useRouter();
-  const toast = useToast();
   const { homeId, homeName } = useLocalSearchParams<{ homeId: string; homeName?: string }>();
   const invite = useCreateInvite(homeId);
   const started = useRef(false);
@@ -21,18 +20,9 @@ export default function Invite() {
   }, [homeId, invite]);
 
   const link = invite.data?.url;
+  const shareLink = useShareInvite(homeName ?? '');
   const share = async () => {
-    if (!link) return;
-    try {
-      // Android ignores `url`, so its message carries the link; elsewhere the link rides along separately.
-      const message = t(Platform.OS === 'android' ? 'invite.messageWithLink' : 'invite.message', { home: homeName ?? '', url: link });
-      await Share.share({ message, url: link });
-    } catch (error) {
-      // Dismissing the browser's share sheet is not a failure.
-      if (Platform.OS === 'web' && error instanceof Error && error.name === 'AbortError') return;
-      await Clipboard.setStringAsync(link);
-      toast.show({ message: t('invite.copied') });
-    }
+    if (link) await shareLink(link);
   };
 
   return (

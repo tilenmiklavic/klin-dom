@@ -65,3 +65,63 @@ export function useMembers(homeId: string | null) {
     refetchInterval: false,
   });
 }
+
+export function useUpdateHome(homeId: string | null) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api.updateHome(homeId!, { name }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['home', homeId] }),
+        queryClient.invalidateQueries({ queryKey: bootstrapKey }),
+      ]),
+  });
+}
+
+export function useRemoveMember(homeId: string | null) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => api.removeMember(homeId!, userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members', homeId] }),
+  });
+}
+
+export function useTransferHome(homeId: string | null) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => api.transferHome(homeId!, userId),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['home', homeId] }),
+        queryClient.invalidateQueries({ queryKey: ['members', homeId] }),
+        queryClient.invalidateQueries({ queryKey: bootstrapKey }),
+      ]),
+  });
+}
+
+export function useLeaveHome(homeId: string | null) {
+  const api = useApi();
+  return useMutation({ mutationFn: () => api.leaveHome(homeId!) });
+}
+
+export function useDeleteHome(homeId: string | null) {
+  const api = useApi();
+  return useMutation({ mutationFn: (confirmName: string) => api.deleteHome(homeId!, confirmName) });
+}
+
+export function useUpdateMe() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (displayName: string) => api.updateMe({ displayName }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: bootstrapKey }),
+  });
+}
+
+export function useDeleteMe() {
+  const api = useApi();
+  return useMutation({ mutationFn: () => api.deleteMe() });
+}
