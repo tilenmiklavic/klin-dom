@@ -7,6 +7,7 @@ import type { Db } from './db.js';
 import { errorBody, errorHandler } from './errors.js';
 import { completionRoutes } from './routes/completions.js';
 import { dashboardRoutes } from './routes/dashboard.js';
+import { devRoutes } from './routes/dev.js';
 import { homeRoutes } from './routes/homes.js';
 import { inviteRoutes } from './routes/invites.js';
 import { meRoutes } from './routes/me.js';
@@ -43,6 +44,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
     }),
   );
   app.get('/healthz', (c) => c.json({ ok: true }));
+  if (deps.config.AUTH_MODE === 'dev') app.route('/', devRoutes(deps));
   app.route('/', meRoutes(deps));
   app.route('/', homeRoutes(deps));
   app.route('/', inviteRoutes(deps));
