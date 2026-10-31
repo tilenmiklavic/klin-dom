@@ -22,13 +22,13 @@ export interface InviteRow {
   created_at: Date;
 }
 
-export async function insertInvite(db: Db, homeId: string, createdBy: string): Promise<InviteRow> {
+export async function insertInvite(db: Db, homeId: string, createdBy: string, now: Date): Promise<InviteRow> {
   for (let attempt = 0; ; attempt++) {
     try {
       const [row] = await db.query<InviteRow>(
-        `insert into invites (home_id, code, created_by) values ($1, $2, $3)
+        `insert into invites (home_id, code, created_by, created_at) values ($1, $2, $3, $4)
          returning id, home_id, code, created_by, created_at`,
-        [homeId, generateInviteCode(), createdBy],
+        [homeId, generateInviteCode(), createdBy, now],
       );
       return row!;
     } catch (err) {

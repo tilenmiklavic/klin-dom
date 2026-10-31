@@ -83,24 +83,30 @@ export function taskRoutes(deps: AppDeps) {
     if (input.roomIds) await assertRoomsInHome(db, homeId, input.roomIds);
     await assertAssignee(db, homeId, input.assigneeId);
 
-    const count = input.intervalCount ?? task.intervalCount;
-    const unit = input.intervalUnit ?? task.intervalUnit;
-    const intervalChanged = count !== task.intervalCount || unit !== task.intervalUnit;
     const tz = await homeTimezone(db, homeId);
-    const nextDue =
-      intervalChanged && task.lastCompletedAt
-        ? addInterval(localDate(new Date(task.lastCompletedAt), tz), count, unit)
-        : task.nextDueDate;
 
     await db.tx(async (q) => {
+      // Lock and re-read so a completion that landed meanwhile is never reverted.
+      const [fresh] = await q.query<{ interval_count: number; interval_unit: 'day' | 'week' | 'month'; last_completed_at: Date | null }>(
+        'select interval_count, interval_unit, last_completed_at from tasks where id = $1 for update',
+        [task.id],
+      );
+      const count = input.intervalCount ?? fresh!.interval_count;
+      const unit = input.intervalUnit ?? fresh!.interval_unit;
+      const intervalChanged = count !== fresh!.interval_count || unit !== fresh!.interval_unit;
       await q.query(
         `update tasks set name = $2, icon = $3, notes = $4, interval_count = $5, interval_unit = $6,
-           due_time = $7, assignee_id = $8, next_due_date = $9 where id = $1`,
+           due_time = $7, assignee_id = $8 where id = $1`,
         [task.id, input.name ?? task.name, input.icon ?? task.icon,
          input.notes !== undefined ? input.notes : task.notes, count, unit,
          input.dueTime !== undefined ? input.dueTime : task.dueTime,
-         input.assigneeId !== undefined ? input.assigneeId : task.assigneeId, nextDue],
+         input.assigneeId !== undefined ? input.assigneeId : task.assigneeId],
       );
+      if (intervalChanged && fresh!.last_completed_at) {
+        await q.query('update tasks set next_due_date = $2 where id = $1', [
+          task.id, addInterval(localDate(fresh!.last_completed_at, tz), count, unit),
+        ]);
+      }
       if (input.roomIds) await setTaskRooms(q, task.id, input.roomIds);
       if (input.reminderOffsets) await setTaskReminders(q, task.id, input.reminderOffsets);
     });

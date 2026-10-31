@@ -87,6 +87,17 @@ CREATE TABLE public.home_members (
 
 
 --
+-- Name: home_removals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.home_removals (
+    home_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    removed_at timestamp with time zone NOT NULL
+);
+
+
+--
 -- Name: homes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -270,6 +281,14 @@ ALTER TABLE ONLY public.home_members
 
 
 --
+-- Name: home_removals home_removals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.home_removals
+    ADD CONSTRAINT home_removals_pkey PRIMARY KEY (home_id, user_id);
+
+
+--
 -- Name: homes homes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -397,10 +416,10 @@ CREATE INDEX completions_home_time_idx ON public.completions USING btree (home_i
 
 
 --
--- Name: completions_one_done_per_due; Type: INDEX; Schema: public; Owner: -
+-- Name: completions_task_due_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX completions_one_done_per_due ON public.completions USING btree (task_id, due_date) WHERE (kind = 'done'::text);
+CREATE INDEX completions_task_due_idx ON public.completions USING btree (task_id, due_date);
 
 
 --
@@ -480,6 +499,22 @@ ALTER TABLE ONLY public.home_members
 
 ALTER TABLE ONLY public.home_members
     ADD CONSTRAINT home_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: home_removals home_removals_home_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.home_removals
+    ADD CONSTRAINT home_removals_home_id_fkey FOREIGN KEY (home_id) REFERENCES public.homes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: home_removals home_removals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.home_removals
+    ADD CONSTRAINT home_removals_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -614,4 +649,5 @@ ALTER TABLE ONLY public.tasks
 --
 
 INSERT INTO public.schema_migrations (version) VALUES
-    ('20261031000001');
+    ('20261031000001'),
+    ('20261031000002');

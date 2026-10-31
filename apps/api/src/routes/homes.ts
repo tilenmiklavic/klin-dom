@@ -73,7 +73,17 @@ export function homeRoutes(deps: AppDeps) {
     await requireOwner(db, homeId, user.id);
     if (target === user.id) throw new HttpError(400, 'cannot_remove_self', 'Use leave home instead');
     await requireMember(db, homeId, target);
-    await db.tx((q) => removeMembership(q, homeId, target));
+    await db.tx(async (q) => {
+      await removeMembership(q, homeId, target);
+      await q.query('update invites set revoked_at = $3 where home_id = $1 and created_by = $2 and revoked_at is null', [
+        homeId, target, deps.clock.now(),
+      ]);
+      await q.query(
+        `insert into home_removals (home_id, user_id, removed_at) values ($1, $2, $3)
+         on conflict (home_id, user_id) do update set removed_at = excluded.removed_at`,
+        [homeId, target, deps.clock.now()],
+      );
+    });
     return c.body(null, 204);
   });
 

@@ -34,7 +34,7 @@ export async function resetDb(): Promise<void> {
 export function testDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   return {
     clock: new FixedClock(new Date('2026-10-31T09:00:00Z')),
-    config: loadConfig({ AUTH_MODE: 'dev', AUTH_DEV_SECRET: TEST_SECRET, APP_URL: 'http://localhost:8081' }),
+    config: loadConfig({ AUTH_MODE: 'dev', AUTH_DEV_SECRET: TEST_SECRET, ALLOW_DEV_AUTH: 'true', APP_URL: 'http://localhost:8081' }),
     db: getTestDb(),
     verifier: devVerifier(TEST_SECRET),
     ...overrides,

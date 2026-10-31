@@ -66,11 +66,16 @@ export function completionRoutes(deps: AppDeps) {
 
     const result = await db.tx(async (q) => {
       const task = await lockTask(q, c.req.param('id'));
-      const [existing] = await q.query<{ id: string }>(
-        `select id from completions where task_id = $1 and due_date = $2 and kind = 'done'`,
-        [task.id, dueDate ?? task.next_due_date],
-      );
-      if (existing) return { id: existing.id, created: false };
+      // A client whose view is stale (someone already ticked the date it saw) gets
+      // that completion back instead of completing the next occurrence too.
+      if (dueDate && dueDate !== task.next_due_date) {
+        const [existing] = await q.query<{ id: string }>(
+          `select id from completions where task_id = $1 and due_date = $2 and kind = 'done'
+           order by completed_at desc limit 1`,
+          [task.id, dueDate],
+        );
+        if (existing) return { id: existing.id, created: false };
+      }
       const id = await insertCompletion(q, task, userId, 'done', now);
       await q.query('update tasks set last_completed_at = $2, next_due_date = $3 where id = $1', [
         task.id, now, nextDueAfterCompletion(now, tz, task.interval_count, task.interval_unit),

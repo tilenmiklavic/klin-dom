@@ -37,14 +37,8 @@ it('starts with an empty database after reset', async () => {
   expect(row!.count).toBe('0');
 });
 
-it('allows only one done completion per task and due date', async () => {
+it('allows two done completions for the same due date (early completions)', async () => {
   const taskId = await seedTask();
   await insertCompletion(taskId, 'done');
-  await expect(insertCompletion(taskId, 'done')).rejects.toMatchObject({ code: '23505' });
-});
-
-it('allows a skip next to a done completion for the same due date', async () => {
-  const taskId = await seedTask();
-  await insertCompletion(taskId, 'done');
-  await expect(insertCompletion(taskId, 'skip')).resolves.toBeUndefined();
+  await expect(insertCompletion(taskId, 'done')).resolves.toBeUndefined();
 });

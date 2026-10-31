@@ -35,14 +35,13 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgres://klindom:klindom@postgres:5432/klindom
-      AUTH_MODE: ${AUTH_MODE:-dev}
-      AUTH_DEV_SECRET: ${AUTH_DEV_SECRET:-local-dev-secret}
+      AUTH_MODE: jwks
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
       AUTH_ISSUER: ${AUTH_ISSUER:-}
       APP_URL: ${APP_URL:-http://localhost:8081}
-      CRON_SECRET: ${CRON_SECRET:-local-cron-secret}
+      CRON_SECRET: ${CRON_SECRET:-}
     ports: ["8080:8080"]
     depends_on:
       migrate: { condition: service_completed_successfully }

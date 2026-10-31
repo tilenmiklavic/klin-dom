@@ -23,7 +23,7 @@ export function inviteRoutes(deps: AppDeps) {
     const homeId = c.req.param('id');
     const user = c.get('user');
     await requireMember(db, homeId, user.id);
-    return c.json(toDto(await insertInvite(db, homeId, user.id)), 201);
+    return c.json(toDto(await insertInvite(db, homeId, user.id, deps.clock.now())), 201);
   });
 
   r.get('/homes/:id/invites', auth, async (c) => {
@@ -61,6 +61,13 @@ export function inviteRoutes(deps: AppDeps) {
     const user = c.get('user');
     const invite = await findActiveInvite(db, c.req.param('code'));
     if (!invite) throw new HttpError(404, 'not_found', 'This invite is no longer valid');
+    const [removal] = await db.query<{ removed_at: Date }>(
+      'select removed_at from home_removals where home_id = $1 and user_id = $2',
+      [invite.home_id, user.id],
+    );
+    if (removal && removal.removed_at >= invite.created_at) {
+      throw new HttpError(404, 'not_found', 'This invite is no longer valid');
+    }
     await db.query(
       `insert into home_members (home_id, user_id, role) values ($1, $2, 'member') on conflict do nothing`,
       [invite.home_id, user.id],

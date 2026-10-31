@@ -1,0 +1,10 @@
+# Local development only: unsigned-in-the-real-world dev tokens.
+# docker compose -f docker-compose.yml -f compose.dev.yml up --build
+services:
+  api:
+    environment:
+      NODE_ENV: development
+      AUTH_MODE: dev
+      ALLOW_DEV_AUTH: "true"
+      AUTH_DEV_SECRET: local-dev-secret
+      CRON_SECRET: local-cron-secret

@@ -16,7 +16,7 @@ pnpm install
 docker compose up -d postgres-test   # for tests
 pnpm test
 pnpm typecheck
-docker compose up --build            # API on :8080 with local Postgres
+docker compose -f docker-compose.yml -f compose.dev.yml up --build   # API on :8080, dev auth
 ```
 
-Copy `.env.example` to `.env` for local runs.
+Copy `.env.example` to `.env` for local runs. Plain `docker compose up` expects real auth (`AUTH_JWKS_URL`, `AUTH_ISSUER`); dev tokens only work with `compose.dev.yml`.

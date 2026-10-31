@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import type { TokenVerifier } from './auth/verify.js';
 import type { Clock } from './clock.js';
 import type { Config } from './config.js';
@@ -32,6 +33,15 @@ export type AppEnv = { Variables: { user: CurrentUser } };
 
 export function createApp(deps: AppDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
+  app.use(
+    '*',
+    cors({
+      origin: deps.config.APP_URL,
+      allowHeaders: ['Authorization', 'Content-Type'],
+      allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+      maxAge: 600,
+    }),
+  );
   app.get('/healthz', (c) => c.json({ ok: true }));
   app.route('/', meRoutes(deps));
   app.route('/', homeRoutes(deps));
