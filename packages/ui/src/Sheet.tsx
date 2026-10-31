@@ -8,13 +8,14 @@ export interface SheetProps {
   visible: boolean;
   onClose: () => void;
   title: string;
+  closeLabel: string;
   children: ReactNode;
   footer?: ReactNode;
 }
 
 const MAX_WIDTH = 480;
 
-export function Sheet({ visible, onClose, title, children, footer }: SheetProps) {
+export function Sheet({ visible, onClose, title, closeLabel, children, footer }: SheetProps) {
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -22,7 +23,7 @@ export function Sheet({ visible, onClose, title, children, footer }: SheetProps)
         <Pressable
           testID="sheet-backdrop"
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={closeLabel}
           onPress={onClose}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20, 20, 20, 0.45)' }}
         />

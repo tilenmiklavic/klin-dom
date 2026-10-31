@@ -30,7 +30,7 @@ describe('Sheet', () => {
     const onClose = jest.fn();
     await render(
       <SafeAreaProvider initialMetrics={metrics}>
-        <Sheet visible onClose={onClose} title="Reminder" footer={<Text>Footer</Text>}>
+        <Sheet visible onClose={onClose} title="Reminder" closeLabel="Close sheet" footer={<Text>Footer</Text>}>
           <Text>Body</Text>
         </Sheet>
       </SafeAreaProvider>,
@@ -38,6 +38,7 @@ describe('Sheet', () => {
     expect(screen.getByText('Reminder')).toBeTruthy();
     expect(screen.getByText('Body')).toBeTruthy();
     expect(screen.getByText('Footer')).toBeTruthy();
+    expect(screen.getByLabelText('Close sheet')).toBe(screen.getByTestId('sheet-backdrop'));
     await fireEvent.press(screen.getByTestId('sheet-backdrop'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -45,7 +46,7 @@ describe('Sheet', () => {
   it('renders nothing when hidden', async () => {
     await render(
       <SafeAreaProvider initialMetrics={metrics}>
-        <Sheet visible={false} onClose={jest.fn()} title="Hidden">
+        <Sheet visible={false} onClose={jest.fn()} title="Hidden" closeLabel="Close sheet">
           <Text>Body</Text>
         </Sheet>
       </SafeAreaProvider>,
@@ -53,6 +54,16 @@ describe('Sheet', () => {
     expect(screen.queryByText('Body')).toBeNull();
   });
 });
+
+function Multi() {
+  const toast = useToast();
+  return (
+    <>
+      <Text onPress={() => toast.show({ message: 'A' })}>showA</Text>
+      <Text onPress={() => toast.show({ message: 'B' })}>showB</Text>
+    </>
+  );
+}
 
 function Trigger({ onAction, durationMs }: { onAction: () => void; durationMs?: number }) {
   const toast = useToast();
@@ -112,6 +123,49 @@ describe('Toast', () => {
       jest.advanceTimersByTime(1);
     });
     expect(screen.queryByText('Task removed')).toBeNull();
+  });
+});
+
+describe('Toast replacement and unmount', () => {
+  it('a second show cancels the first timer', async () => {
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <ToastProvider>
+          <Multi />
+        </ToastProvider>
+      </SafeAreaProvider>,
+    );
+    await fireEvent.press(screen.getByText('showA'));
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+    });
+    await fireEvent.press(screen.getByText('showB'));
+    expect(screen.queryByText('A')).toBeNull();
+    await act(async () => {
+      jest.advanceTimersByTime(3999);
+    });
+    expect(screen.getByText('B')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(screen.queryByText('B')).toBeNull();
+  });
+
+  it('leaves no pending timer after unmount', async () => {
+    const view = await renderToast({ onAction: jest.fn() });
+    const setSpy = jest.spyOn(globalThis, 'setTimeout');
+    const clearSpy = jest.spyOn(globalThis, 'clearTimeout');
+    await fireEvent.press(screen.getByText('go'));
+    const idx = setSpy.mock.calls.findIndex((c: unknown[]) => c[1] === 4000);
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const toastTimer = setSpy.mock.results[idx]?.value;
+    await view.unmount();
+    expect(clearSpy).toHaveBeenCalledWith(toastTimer);
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    setSpy.mockRestore();
+    clearSpy.mockRestore();
   });
 });
 
