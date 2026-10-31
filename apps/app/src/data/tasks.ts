@@ -1,0 +1,171 @@
+import { useCallback, useRef, useState } from 'react';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { useToast } from '@klindom/ui';
+import type { CompletionDto, CompletionResultDto, DashboardDto, TaskDto, UndoResultDto } from '@klindom/shared';
+import { useApi } from './api';
+import { dashboardKey } from './dashboard';
+import { useBootstrap } from './useBootstrap';
+
+type Done = DashboardDto['doneToday'][number];
+type Patch = (d: DashboardDto) => DashboardDto;
+
+const optimisticId = (taskId: string) => `optimistic:${taskId}`;
+const bump = (r: DashboardDto['rings'], by: number): DashboardDto['rings'] => ({
+  ...r,
+  today: { ...r.today, done: Math.max(0, r.today.done + by) },
+  week: { ...r.week, done: Math.max(0, r.week.done + by) },
+});
+export const asDone = (task: TaskDto, c: CompletionDto): Done => ({
+  ...c,
+  taskName: task.name,
+  taskIcon: task.icon,
+  roomNames: task.rooms.map((r) => r.name),
+});
+
+/** Applies `patch` to every cached dashboard of the home (both scopes). */
+function patchDashboards(qc: QueryClient, homeId: string, patch: Patch, scope?: 'all') {
+  qc.setQueriesData<DashboardDto>({ queryKey: dashboardKey(homeId, scope) }, (d) => (d ? patch(d) : d));
+}
+
+interface TickOp<V, R> {
+  /** Calls that share a key are ignored while one is in flight. */
+  key: (v: V) => string;
+  call: (api: ReturnType<typeof useApi>, v: V) => Promise<R>;
+  optimistic: (v: V, me: { id: string; name: string }) => Patch;
+  revert: (v: V) => Patch;
+  /** Patch applied once the server answered (for every scope). */
+  settle?: (v: V, r: R) => Patch;
+  rings: (r: R) => DashboardDto['rings'];
+}
+
+/**
+ * Optimistic dashboard mutation: patches every cached dashboard first, then keeps the server's answer,
+ * or reverts just this change and toasts when the call fails. A second call for the same key is ignored.
+ */
+function useTickOp<V, R>(homeId: string | null, op: TickOp<V, R>) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { t } = useTranslation();
+  const me = useBootstrap().data?.user;
+  const inFlight = useRef(new Set<string>());
+  const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
+  const opRef = useRef(op);
+  opRef.current = op;
+
+  const run = useCallback(
+    async (v: V): Promise<R | null> => {
+      if (!homeId) return null;
+      const o = opRef.current;
+      const key = o.key(v);
+      if (inFlight.current.has(key)) return null;
+      inFlight.current.add(key);
+      setPending(new Set(inFlight.current));
+      try {
+        await qc.cancelQueries({ queryKey: dashboardKey(homeId) });
+        patchDashboards(qc, homeId, o.optimistic(v, { id: me?.id ?? '', name: me?.displayName ?? '' }));
+        try {
+          const result = await o.call(api, v);
+          if (o.settle) patchDashboards(qc, homeId, o.settle(v, result));
+          // Rings come from the server for the whole home; "mine" catches up on the refetch below.
+          patchDashboards(qc, homeId, (d) => ({ ...d, rings: o.rings(result) }), 'all');
+          void qc.invalidateQueries({ queryKey: dashboardKey(homeId) });
+          return result;
+        } catch {
+          patchDashboards(qc, homeId, o.revert(v));
+          toast.show({ message: t('errors.tickFailed') });
+          void qc.invalidateQueries({ queryKey: dashboardKey(homeId) });
+          return null;
+        }
+      } finally {
+        inFlight.current.delete(key);
+        setPending(new Set(inFlight.current));
+      }
+    },
+    [homeId, api, qc, toast, t, me?.id, me?.displayName],
+  );
+  return { run, pending };
+}
+
+/** Where a task sat in the due list, so a revert puts it back in place. */
+const positions = new Map<string, number>();
+
+const withoutDue = (d: DashboardDto, taskId: string) => d.dueToday.filter((x) => x.id !== taskId);
+const restoreDue = (d: DashboardDto, task: TaskDto) => {
+  if (d.dueToday.some((x) => x.id === task.id)) return d.dueToday;
+  const at = Math.min(positions.get(task.id) ?? 0, d.dueToday.length);
+  return [...d.dueToday.slice(0, at), task, ...d.dueToday.slice(at)];
+};
+
+/** Ticks a task off. Always sends the task's own `nextDueDate`, which the server uses to dedupe. */
+export function useCompleteTask(homeId: string | null) {
+  const { run, pending } = useTickOp<TaskDto, CompletionResultDto>(homeId, {
+    key: (task) => task.id,
+    call: (api, task) => api.completeTask(task.id, task.nextDueDate),
+    optimistic: (task, me) => (d) => {
+      positions.set(task.id, d.dueToday.findIndex((x) => x.id === task.id));
+      const row: Done = {
+        id: optimisticId(task.id),
+        taskId: task.id,
+        kind: 'done',
+        userId: me.id,
+        userName: me.name,
+        completedAt: new Date(Date.now()).toISOString(),
+        dueDate: task.nextDueDate,
+        onTime: !task.overdue,
+        taskName: task.name,
+        taskIcon: task.icon,
+        roomNames: task.rooms.map((r) => r.name),
+      };
+      return { ...d, dueToday: withoutDue(d, task.id), doneToday: [...d.doneToday, row], rings: bump(d.rings, 1) };
+    },
+    revert: (task) => (d) => ({
+      ...d,
+      dueToday: restoreDue(d, task),
+      doneToday: d.doneToday.filter((x) => x.id !== optimisticId(task.id)),
+      rings: bump(d.rings, -1),
+    }),
+    settle: (task, r) => (d) => ({
+      ...d,
+      doneToday: d.doneToday.map((x) => (x.id === optimisticId(task.id) ? asDone(task, r.completion) : x)),
+    }),
+    rings: (r) => r.rings,
+  });
+  return { complete: run, pending };
+}
+
+/** Skips a task's current occurrence. Skips do not count towards the rings. */
+export function useSkipTask(homeId: string | null) {
+  const { run, pending } = useTickOp<TaskDto, CompletionResultDto>(homeId, {
+    key: (task) => task.id,
+    call: (api, task) => api.skipTask(task.id),
+    optimistic: (task) => (d) => {
+      positions.set(task.id, d.dueToday.findIndex((x) => x.id === task.id));
+      return { ...d, dueToday: withoutDue(d, task.id) };
+    },
+    revert: (task) => (d) => ({ ...d, dueToday: restoreDue(d, task) }),
+    rings: (r) => r.rings,
+  });
+  return { skip: run, pending };
+}
+
+/** Undoes a completion: the row leaves "done" and the rings step back; the refetch returns the task to the list. */
+export function useUndoCompletion(homeId: string | null) {
+  const { run, pending } = useTickOp<Done, UndoResultDto>(homeId, {
+    key: (c) => c.id,
+    call: (api, c) => api.undoCompletion(c.id),
+    optimistic: (c) => (d) => ({ ...d, doneToday: d.doneToday.filter((x) => x.id !== c.id), rings: bump(d.rings, -1) }),
+    revert: (c) => (d) => ({
+      ...d,
+      doneToday: d.doneToday.some((x) => x.id === c.id) ? d.doneToday : [...d.doneToday, c],
+      rings: bump(d.rings, 1),
+    }),
+    settle: (_c, r) => (d) => ({
+      ...d,
+      dueToday: d.dueToday.some((x) => x.id === r.task.id) ? d.dueToday : [r.task, ...d.dueToday],
+    }),
+    rings: (r) => r.rings,
+  });
+  return { undo: run, pending };
+}

@@ -179,12 +179,12 @@ describe('auth gate transitions', () => {
     mockAuth.token = 'tok';
     bootstrapResponses = [json(200, { user, homes })];
     await renderApp();
-    expect(await screen.findByText('Today')).toBeTruthy();
+    expect(await screen.findByText('Home')).toBeTruthy();
     await act(async () => {
       mockAuth.setToken(null);
     });
     // Synchronously after the status flip: the protected screen is hidden, not merely covered.
-    expect(screen.queryByText('Today')).toBeNull();
+    expect(screen.queryByText('Home')).toBeNull();
     expect(await screen.findByText('Let’s make home shine.')).toBeTruthy();
     expect(app.getPathname()).toBe('/welcome');
   });
@@ -203,10 +203,10 @@ describe('auth gate transitions', () => {
     });
     await renderApp();
     expect(await screen.findByText('Couldn’t reach KlinDom', undefined, { timeout: 5000 })).toBeTruthy();
-    expect(screen.queryByText('Today')).toBeNull();
+    expect(screen.queryByText('Home')).toBeNull();
     fail = false;
     await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('Today')).toBeTruthy();
+    expect(await screen.findByText('Home')).toBeTruthy();
     expect(screen.queryByText('Couldn’t reach KlinDom')).toBeNull();
     expect(app.getPathname()).toBe('/');
   });

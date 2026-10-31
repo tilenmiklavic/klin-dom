@@ -32,7 +32,8 @@
     "signOut": "Sign out"
   },
   "errors": {
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "tickFailed": "Couldn’t save that — try again"
   },
   "onboarding": {
     "title": "Set up your home",
@@ -41,7 +42,10 @@
     "join": "Join a home"
   },
   "tabs": {
-    "today": "Today"
+    "home": "Home",
+    "rooms": "Rooms",
+    "tasks": "Tasks",
+    "profile": "Profile"
   },
   "join": {
     "title": "Join a Home",
@@ -95,6 +99,31 @@
   },
   "common": {
     "back": "Back",
-    "continue": "Continue"
+    "continue": "Continue",
+    "close": "Close",
+    "retry": "Try again"
+  },
+  "home": {
+    "greetingFresh": "Fresh start today!",
+    "greetingDone": "All done for today",
+    "greetingGoing": "Nice, keep going",
+    "ringToday": "Today",
+    "ringWeek": "This week",
+    "ringFresh": "Home fresh",
+    "scopeAll": "All",
+    "scopeMine": "Mine",
+    "dueToday": "Due Today",
+    "seeAll": "See all",
+    "doneBy": "Done by {{name}} · {{time}}",
+    "emptyTitle": "Nothing due today",
+    "emptyBody": "Add a task and it will show up here when it’s due.",
+    "addTask": "Add a task",
+    "loadFailed": "Couldn’t load your home",
+    "loadFailedBody": "Check your connection and try again.",
+    "tickDone": "Mark {{name}} done",
+    "tickUndone": "Mark {{name}} not done",
+    "completed": "{{name}} done",
+    "undo": "Undo",
+    "skip": "Skip this time"
   }
 }

@@ -42,3 +42,26 @@ export function useAcceptInvite() {
   const api = useApi();
   return useMutation({ mutationFn: (code: string) => api.acceptInvite(code) });
 }
+
+/** The full home record: its timezone decides what "today" is. */
+export function useHome(homeId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['home', homeId],
+    queryFn: () => api.getHome(homeId!),
+    enabled: homeId !== null,
+    staleTime: 5 * 60_000,
+    refetchInterval: false,
+  });
+}
+
+export function useMembers(homeId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['members', homeId],
+    queryFn: () => api.listMembers(homeId!),
+    enabled: homeId !== null,
+    staleTime: 60_000,
+    refetchInterval: false,
+  });
+}
