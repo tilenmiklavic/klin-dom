@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: klindom
+      POSTGRES_PASSWORD: klindom
+      POSTGRES_DB: klindom
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U klindom"]
+      interval: 2s
+      retries: 20
+
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: klindom
+      POSTGRES_PASSWORD: klindom
+      POSTGRES_DB: klindom_test
+    ports: ["54329:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+
+  migrate:
+    image: ghcr.io/amacneil/dbmate:2
+    environment:
+      DATABASE_URL: postgres://klindom:klindom@postgres:5432/klindom?sslmode=disable
+    volumes: [./db:/db]
+    command: ["--wait", "up"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgres://klindom:klindom@postgres:5432/klindom
+      AUTH_MODE: ${AUTH_MODE:-dev}
+      AUTH_DEV_SECRET: ${AUTH_DEV_SECRET:-local-dev-secret}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
+      AUTH_ISSUER: ${AUTH_ISSUER:-}
+      APP_URL: ${APP_URL:-http://localhost:8081}
+      CRON_SECRET: ${CRON_SECRET:-local-cron-secret}
+    ports: ["8080:8080"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+volumes:
+  pgdata:
