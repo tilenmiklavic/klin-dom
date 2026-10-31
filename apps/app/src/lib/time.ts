@@ -16,3 +16,9 @@ export function formatClock(instant: string, timeZone: string): string {
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
   return `${Number(get('hour'))}:${get('minute')}`;
 }
+
+/** "31 Oct" for a calendar date, from its parts (device zone never shifts it). */
+export function formatShortDate(date: IsoDate): string {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
+}

@@ -1,11 +1,27 @@
 import { useCallback, useRef, useState } from 'react';
-import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '@klindom/ui';
-import type { CompletionDto, CompletionResultDto, DashboardDto, TaskDto, UndoResultDto } from '@klindom/shared';
+import type { ApiClient, CompletionDto, CompletionResultDto, DashboardDto, TaskDto, UndoResultDto } from '@klindom/shared';
 import { useApi } from './api';
-import { dashboardKey } from './dashboard';
+import { dashboardKey, type Scope } from './dashboard';
 import { useBootstrap } from './useBootstrap';
+
+export type CreateTaskInput = Parameters<ApiClient['createTask']>[1];
+export type UpdateTaskPatch = Parameters<ApiClient['updateTask']>[1];
+
+export const tasksKey = (homeId: string, scope?: Scope, roomId?: string) =>
+  scope ? (['tasks', homeId, scope, roomId ?? null] as const) : (['tasks', homeId] as const);
+export const taskKey = (taskId: string) => ['task', taskId] as const;
+export const historyKey = (taskId: string) => ['history', taskId] as const;
+
+/** Refreshes every task list, the task itself, its history and the dashboards. */
+function invalidateTaskData(qc: QueryClient, homeId: string, taskId?: string) {
+  void qc.invalidateQueries({ queryKey: tasksKey(homeId) });
+  void qc.invalidateQueries({ queryKey: taskId ? taskKey(taskId) : ['task'] });
+  void qc.invalidateQueries({ queryKey: taskId ? historyKey(taskId) : ['history'] });
+  void qc.invalidateQueries({ queryKey: dashboardKey(homeId) });
+}
 
 type Done = DashboardDto['doneToday'][number];
 type Patch = (d: DashboardDto) => DashboardDto;
@@ -75,14 +91,14 @@ function useTickOp<V, R>(homeId: string | null, op: TickOp<V, R>) {
           if (o.settle) patchDashboards(qc, homeId, o.settle(v, result));
           // Rings come from the server for the whole home; "mine" catches up on the refetch below.
           patchDashboards(qc, homeId, (d) => ({ ...d, rings: o.rings(result) }), 'all');
-          void qc.invalidateQueries({ queryKey: dashboardKey(homeId) });
+          invalidateTaskData(qc, homeId);
           return result;
         } catch {
           for (const [cacheKey, was] of before) {
             if (was) qc.setQueryData<DashboardDto>(cacheKey, (d) => (d ? o.revert(v, was)(d) : d));
           }
           toast.show({ message: t('errors.tickFailed') });
-          void qc.invalidateQueries({ queryKey: dashboardKey(homeId) });
+          invalidateTaskData(qc, homeId);
           return null;
         }
       } finally {
@@ -186,4 +202,66 @@ export function useUndoCompletion(homeId: string | null) {
     rings: (r) => r.rings,
   });
   return { undo: run, pending };
+}
+
+/** Active tasks of a home; `mine` keeps the ones assigned to me or to the household. */
+export function useTasks(homeId: string | null, scope: Scope, roomId?: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: tasksKey(homeId ?? '', scope, roomId),
+    queryFn: () => api.listTasks(homeId!, { scope, roomId }),
+    enabled: homeId !== null,
+  });
+}
+
+export function useTask(taskId: string | undefined) {
+  const api = useApi();
+  return useQuery({ queryKey: taskKey(taskId ?? ''), queryFn: () => api.getTask(taskId!), enabled: Boolean(taskId) });
+}
+
+export function useTaskHistory(taskId: string | undefined) {
+  const api = useApi();
+  return useQuery({ queryKey: historyKey(taskId ?? ''), queryFn: () => api.taskHistory(taskId!, 20), enabled: Boolean(taskId) });
+}
+
+export function useCreateTask(homeId: string | null) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateTaskInput) => api.createTask(homeId!, input),
+    onSuccess: () => invalidateTaskData(qc, homeId!),
+  });
+}
+
+export function useUpdateTask(homeId: string | null, taskId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: UpdateTaskPatch) => api.updateTask(taskId, patch),
+    onSuccess: () => invalidateTaskData(qc, homeId!, taskId),
+  });
+}
+
+export function useArchiveTask(homeId: string | null, taskId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.archiveTask(taskId),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: taskKey(taskId) });
+      invalidateTaskData(qc, homeId!, taskId);
+    },
+  });
+}
+
+export function useMuteTask(homeId: string | null, taskId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (muted: boolean) => api.muteTask(taskId, muted),
+    onSuccess: (task) => {
+      qc.setQueryData(taskKey(taskId), task);
+      invalidateTaskData(qc, homeId!, taskId);
+    },
+  });
 }

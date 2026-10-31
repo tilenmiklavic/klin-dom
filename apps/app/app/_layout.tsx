@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 // Per-weight entry points: the package barrel would bundle every Geist weight and italic.
@@ -26,7 +26,9 @@ export default function RootLayout() {
         <AuthProvider>
           <ToastProvider>
             <AuthGate>
-              <Slot />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="task-editor" options={{ presentation: 'modal' }} />
+              </Stack>
             </AuthGate>
             <StatusBar style="dark" />
           </ToastProvider>
