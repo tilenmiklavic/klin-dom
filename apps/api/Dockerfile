@@ -14,7 +14,6 @@ FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /repo/apps/api/dist ./dist
-COPY --from=build /repo/db/seed ./db/seed
 USER node
 EXPOSE 8080
 CMD ["node", "dist/server.cjs"]

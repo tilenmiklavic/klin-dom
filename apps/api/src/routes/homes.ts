@@ -10,6 +10,8 @@ import type { AppDeps, AppEnv } from '../app.js';
 import { requireUser } from '../auth/middleware.js';
 import { HttpError, parseBody } from '../errors.js';
 import { getHome, insertHome, listMembers, memberCount, removeMembership } from '../repo/homes.js';
+import { applySuggestions } from '../suggestions.js';
+import { localDate } from '@klindom/shared';
 
 export function homeRoutes(deps: AppDeps) {
   const { db } = deps;
@@ -19,7 +21,13 @@ export function homeRoutes(deps: AppDeps) {
   r.post('/homes', auth, async (c) => {
     const input = await parseBody(c, CreateHomeInput);
     const user = c.get('user');
-    const homeId = await db.tx((q) => insertHome(q, input.name, input.timezone, user.id));
+    const homeId = await db.tx(async (q) => {
+      const id = await insertHome(q, input.name, input.timezone, user.id);
+      if (input.suggestions) {
+        await applySuggestions(q, id, user.id, input.suggestions, localDate(deps.clock.now(), input.timezone));
+      }
+      return id;
+    });
     return c.json(await getHome(db, homeId, user.id), 201);
   });
 

@@ -11,6 +11,7 @@ import { inviteRoutes } from './routes/invites.js';
 import { meRoutes } from './routes/me.js';
 import { roomRoutes } from './routes/rooms.js';
 import { statsRoutes } from './routes/stats.js';
+import { suggestionRoutes } from './routes/suggestions.js';
 import { taskRoutes } from './routes/tasks.js';
 
 export interface AppDeps {
@@ -40,6 +41,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   app.route('/', completionRoutes(deps));
   app.route('/', dashboardRoutes(deps));
   app.route('/', statsRoutes(deps));
+  app.route('/', suggestionRoutes(deps));
   app.notFound((c) => c.json(errorBody('not_found', 'Not found'), 404));
   app.onError(errorHandler);
   return app;

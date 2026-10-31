@@ -129,3 +129,19 @@ export interface CompletionDto {
   dueDate: string;
   onTime: boolean;
 }
+
+// Suggestions
+
+const SuggestedTask = z.object({
+  key: z.string().regex(/^[a-z0-9-]+$/),
+  name: z.string(),
+  icon: IconNameSchema,
+  intervalCount: z.number().int().min(1),
+  intervalUnit: IntervalUnitSchema,
+});
+
+export const SuggestionCatalog = z.object({
+  rooms: z.array(z.object({ key: z.string().regex(/^[a-z0-9-]+$/), name: z.string(), icon: IconNameSchema, tasks: z.array(SuggestedTask) })),
+  sharedTasks: z.array(SuggestedTask.extend({ roomKeys: z.array(z.string()).min(1) })),
+});
+export type SuggestionCatalog = z.infer<typeof SuggestionCatalog>;
