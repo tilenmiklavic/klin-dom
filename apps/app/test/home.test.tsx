@@ -85,6 +85,8 @@ let dash: Dash;
 let completeGate: Promise<void> | null;
 let completeFails: boolean;
 let dashStatus: number;
+let mineDash: Dash | null;
+let dashHang: boolean;
 const baseDash = (): Dash => ({ rings: rings(), dueToday: [dishes, vacuum, hob], doneToday: [doneRow] });
 
 const defaultFetch = async (url: string, init?: RequestInit) => {
@@ -100,6 +102,8 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
     ]);
   }
   if (url.includes('/homes/h1/dashboard')) {
+    if (dashHang) return new Promise<Response>(() => {});
+    if (mineDash && url.includes('scope=mine')) return json(200, mineDash);
     if (dashStatus !== 200) return json(dashStatus, { error: { code: 'nope', message: 'nope' } });
     return json(200, dash);
   }
@@ -147,6 +151,8 @@ beforeEach(async () => {
   completeGate = null;
   completeFails = false;
   dashStatus = 200;
+  mineDash = null;
+  dashHang = false;
   fetchMock.mockImplementation(defaultFetch);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
@@ -224,6 +230,40 @@ describe('home dashboard', () => {
     await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes done' }));
     expect(await screen.findByText('celebration-visible')).toBeTruthy();
     expect(screen.getByText('All done for today')).toBeTruthy();
+  });
+
+  it('does not celebrate a close that the server rejected', async () => {
+    completeFails = true;
+    dash = { rings: rings({ today: { done: 8, total: 9 } }), dueToday: [dishes], doneToday: [doneRow] };
+    await renderApp();
+    await screen.findByText('/9');
+    await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes done' }));
+    expect(await screen.findByText('Couldn’t save that — try again')).toBeTruthy();
+    expect(screen.queryByText('celebration-visible')).toBeNull();
+    expect(screen.queryByText('All done for today')).toBeNull();
+  });
+
+  it('restores a failed tick at its original index in all, and leaves mine without it', async () => {
+    completeFails = true;
+    mineDash = { rings: rings(), dueToday: [dishes, hob], doneToday: [doneRow] };
+    await renderApp();
+    await screen.findByText('Vacuum the floors');
+    await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
+    await waitFor(() => expect(screen.queryByText('Vacuum the floors')).toBeNull());
+    await fireEvent.press(screen.getByRole('tab', { name: 'All' }));
+    await screen.findByText('Vacuum the floors');
+    // From here the cache is the only source of truth: refetches never answer.
+    dashHang = true;
+    await fireEvent.press(screen.getByRole('checkbox', { name: 'Mark Vacuum the floors done' }));
+    expect(await screen.findByText('Couldn’t save that — try again')).toBeTruthy();
+    const order = () =>
+      screen.getAllByText(/Wash the dishes|Vacuum the floors|Clean the hob/).map((n) => n.props.children);
+    expect(order()).toEqual(['Wash the dishes', 'Vacuum the floors', 'Clean the hob']);
+    expect(screen.getByText('4')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
+    await waitFor(() => expect(screen.queryByText('Vacuum the floors')).toBeNull());
+    expect(order()).toEqual(['Wash the dishes', 'Clean the hob']);
+    expect(screen.queryByText('Mark Vacuum the floors not done')).toBeNull();
   });
 
   it('refetches with scope=mine when switching to Mine', async () => {

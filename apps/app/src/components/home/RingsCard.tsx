@@ -4,7 +4,7 @@ import type { DashboardDto } from '@klindom/shared';
 import { Rings, tokens } from '@klindom/ui';
 
 /** The three nested rings with their legend, on a raised card. */
-export function RingsCard({ rings, onRingClosed }: { rings: DashboardDto['rings']; onRingClosed: (key: string) => void }) {
+export function RingsCard({ rings }: { rings: DashboardDto['rings'] }) {
   const { t } = useTranslation();
   return (
     <View
@@ -17,7 +17,6 @@ export function RingsCard({ rings, onRingClosed }: { rings: DashboardDto['rings'
       }}
     >
       <Rings
-        onRingClosed={onRingClosed}
         rings={[
           { key: 'today', label: t('home.ringToday'), value: rings.today.done, total: rings.today.total, color: 'brand' },
           { key: 'week', label: t('home.ringWeek'), value: rings.week.done, total: rings.week.total, color: 'ink' },

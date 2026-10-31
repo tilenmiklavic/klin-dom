@@ -33,7 +33,8 @@ interface TickOp<V, R> {
   key: (v: V) => string;
   call: (api: ReturnType<typeof useApi>, v: V) => Promise<R>;
   optimistic: (v: V, me: { id: string; name: string }) => Patch;
-  revert: (v: V) => Patch;
+  /** Undoes `optimistic` on one cached dashboard; `before` is that dashboard as it was before the patch. */
+  revert: (v: V, before: DashboardDto) => Patch;
   /** Patch applied once the server answered (for every scope). */
   settle?: (v: V, r: R) => Patch;
   rings: (r: R) => DashboardDto['rings'];
@@ -41,7 +42,8 @@ interface TickOp<V, R> {
 
 /**
  * Optimistic dashboard mutation: patches every cached dashboard first, then keeps the server's answer,
- * or reverts just this change and toasts when the call fails. A second call for the same key is ignored.
+ * or reverts just this change (per cache, from what it held before) and toasts when the call fails.
+ * A second call for the same key is ignored.
  */
 function useTickOp<V, R>(homeId: string | null, op: TickOp<V, R>) {
   const api = useApi();
@@ -64,6 +66,9 @@ function useTickOp<V, R>(homeId: string | null, op: TickOp<V, R>) {
       setPending(new Set(inFlight.current));
       try {
         await qc.cancelQueries({ queryKey: dashboardKey(homeId) });
+        const before = qc.getQueriesData<DashboardDto>({
+          queryKey: dashboardKey(homeId),
+        });
         patchDashboards(qc, homeId, o.optimistic(v, { id: me?.id ?? '', name: me?.displayName ?? '' }));
         try {
           const result = await o.call(api, v);
@@ -73,7 +78,9 @@ function useTickOp<V, R>(homeId: string | null, op: TickOp<V, R>) {
           void qc.invalidateQueries({ queryKey: dashboardKey(homeId) });
           return result;
         } catch {
-          patchDashboards(qc, homeId, o.revert(v));
+          for (const [cacheKey, was] of before) {
+            if (was) qc.setQueryData<DashboardDto>(cacheKey, (d) => (d ? o.revert(v, was)(d) : d));
+          }
           toast.show({ message: t('errors.tickFailed') });
           void qc.invalidateQueries({ queryKey: dashboardKey(homeId) });
           return null;
@@ -88,23 +95,22 @@ function useTickOp<V, R>(homeId: string | null, op: TickOp<V, R>) {
   return { run, pending };
 }
 
-/** Where a task sat in the due list, so a revert puts it back in place. */
-const positions = new Map<string, number>();
-
 const withoutDue = (d: DashboardDto, taskId: string) => d.dueToday.filter((x) => x.id !== taskId);
-const restoreDue = (d: DashboardDto, task: TaskDto) => {
-  if (d.dueToday.some((x) => x.id === task.id)) return d.dueToday;
-  const at = Math.min(positions.get(task.id) ?? 0, d.dueToday.length);
+/** Puts the task back at its index in `before`, only if that cache listed it and it is gone now. */
+const restoreDue = (d: DashboardDto, before: DashboardDto, task: TaskDto) => {
+  const at = before.dueToday.findIndex((x) => x.id === task.id);
+  if (at < 0 || d.dueToday.some((x) => x.id === task.id)) return d.dueToday;
   return [...d.dueToday.slice(0, at), task, ...d.dueToday.slice(at)];
 };
-
+const lists = (d: DashboardDto, task: TaskDto) => d.dueToday.some((x) => x.id === task.id);
 /** Ticks a task off. Always sends the task's own `nextDueDate`, which the server uses to dedupe. */
 export function useCompleteTask(homeId: string | null) {
   const { run, pending } = useTickOp<TaskDto, CompletionResultDto>(homeId, {
     key: (task) => task.id,
     call: (api, task) => api.completeTask(task.id, task.nextDueDate),
+    // Only caches that list the task change (a "mine" list may not include it).
     optimistic: (task, me) => (d) => {
-      positions.set(task.id, d.dueToday.findIndex((x) => x.id === task.id));
+      if (!lists(d, task)) return d;
       const row: Done = {
         id: optimisticId(task.id),
         taskId: task.id,
@@ -118,14 +124,22 @@ export function useCompleteTask(homeId: string | null) {
         taskIcon: task.icon,
         roomNames: task.rooms.map((r) => r.name),
       };
-      return { ...d, dueToday: withoutDue(d, task.id), doneToday: [...d.doneToday, row], rings: bump(d.rings, 1) };
+      return {
+        ...d,
+        dueToday: withoutDue(d, task.id),
+        doneToday: [...d.doneToday, row],
+        rings: bump(d.rings, 1),
+      };
     },
-    revert: (task) => (d) => ({
-      ...d,
-      dueToday: restoreDue(d, task),
-      doneToday: d.doneToday.filter((x) => x.id !== optimisticId(task.id)),
-      rings: bump(d.rings, -1),
-    }),
+    revert: (task, before) => (d) => {
+      if (!lists(before, task)) return d;
+      return {
+        ...d,
+        dueToday: restoreDue(d, before, task),
+        doneToday: d.doneToday.filter((x) => x.id !== optimisticId(task.id)),
+        rings: bump(d.rings, -1),
+      };
+    },
     settle: (task, r) => (d) => ({
       ...d,
       doneToday: d.doneToday.map((x) => (x.id === optimisticId(task.id) ? asDone(task, r.completion) : x)),
@@ -141,10 +155,10 @@ export function useSkipTask(homeId: string | null) {
     key: (task) => task.id,
     call: (api, task) => api.skipTask(task.id),
     optimistic: (task) => (d) => {
-      positions.set(task.id, d.dueToday.findIndex((x) => x.id === task.id));
+      if (!lists(d, task)) return d;
       return { ...d, dueToday: withoutDue(d, task.id) };
     },
-    revert: (task) => (d) => ({ ...d, dueToday: restoreDue(d, task) }),
+    revert: (task, before) => (d) => (lists(before, task) ? { ...d, dueToday: restoreDue(d, before, task) } : d),
     rings: (r) => r.rings,
   });
   return { skip: run, pending };
@@ -155,7 +169,11 @@ export function useUndoCompletion(homeId: string | null) {
   const { run, pending } = useTickOp<Done, UndoResultDto>(homeId, {
     key: (c) => c.id,
     call: (api, c) => api.undoCompletion(c.id),
-    optimistic: (c) => (d) => ({ ...d, doneToday: d.doneToday.filter((x) => x.id !== c.id), rings: bump(d.rings, -1) }),
+    optimistic: (c) => (d) => ({
+      ...d,
+      doneToday: d.doneToday.filter((x) => x.id !== c.id),
+      rings: bump(d.rings, -1),
+    }),
     revert: (c) => (d) => ({
       ...d,
       doneToday: d.doneToday.some((x) => x.id === c.id) ? d.doneToday : [...d.doneToday, c],

@@ -33,8 +33,11 @@ export default function Home() {
   const data = dashboard.data;
 
   const onComplete = async (task: TaskDto) => {
+    const before = data?.rings;
     const result = await complete(task);
     if (!result) return;
+    // Celebrate only what the server confirmed: a ring that was open before this tick and is closed now.
+    if (before && closedByTick(before, result.rings)) setCelebrating(true);
     toast.show({
       message: t('home.completed', { name: task.name }),
       durationMs: 10_000,
@@ -62,7 +65,7 @@ export default function Home() {
               </KText>
             ) : null}
           </View>
-          <RingsCard rings={data.rings} onRingClosed={(key) => key === 'today' && setCelebrating(true)} />
+          <RingsCard rings={data.rings} />
           <SegmentedControl
             value={scope}
             onChange={(v) => setScope(v as Scope)}
@@ -118,4 +121,13 @@ export default function Home() {
 function greeting(rings: DashboardDto['rings'], t: (k: string) => string): string {
   if (rings.today.done === 0) return t('home.greetingFresh');
   return rings.today.done >= rings.today.total ? t('home.greetingDone') : t('home.greetingGoing');
+}
+
+const isClosed = (done: number, total: number) => total > 0 && done >= total;
+
+function closedByTick(before: DashboardDto['rings'], after: DashboardDto['rings']): boolean {
+  return (
+    (!isClosed(before.today.done, before.today.total) && isClosed(after.today.done, after.today.total)) ||
+    (!isClosed(before.week.done, before.week.total) && isClosed(after.week.done, after.week.total))
+  );
 }

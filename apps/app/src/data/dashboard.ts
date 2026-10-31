@@ -14,5 +14,7 @@ export function useDashboard(homeId: string | null, scope: Scope) {
     queryKey: dashboardKey(homeId ?? '', scope),
     queryFn: () => api.dashboard(homeId!, scope),
     enabled: homeId !== null,
+    // Keep the previous scope's data on screen (and the scope control mounted) while the other scope loads.
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[1] === homeId ? prev : undefined),
   });
 }
