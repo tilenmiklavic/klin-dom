@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-native",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["jest", "node"]
+  },
+  "include": ["app", "src", "test", "*.d.ts", "e2e", "playwright.config.ts"]
+}

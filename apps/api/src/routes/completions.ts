@@ -1,4 +1,4 @@
-import { addInterval, CompleteInput, localDate, nextDueAfterCompletion } from '@klindom/shared';
+import { addInterval, CompleteInput, type CompletionResultDto, type UndoResultDto, localDate, nextDueAfterCompletion } from '@klindom/shared';
 import { Hono } from 'hono';
 import { homeIdOf, requireMember } from '../access.js';
 import type { AppDeps, AppEnv } from '../app.js';
@@ -49,11 +49,16 @@ export function completionRoutes(deps: AppDeps) {
   const auth = requireUser(deps);
   const r = new Hono<AppEnv>();
 
-  async function respond(homeId: string, taskId: string, userId: string, completionId: string | null) {
+  async function respond(homeId: string, taskId: string, userId: string) {
     const tz = await homeTimezone(db, homeId);
     const [task] = await queryTasks(db, { homeId, userId, taskId }, localDate(clock.now(), tz));
     const { rings } = await loadRings(db, homeId, userId, 'all', clock.now());
-    return { task, rings, completion: completionId ? await getCompletion(db, completionId, tz) : null };
+    return { task: task!, rings, tz };
+  }
+
+  async function respondWithCompletion(homeId: string, taskId: string, userId: string, completionId: string): Promise<CompletionResultDto> {
+    const { task, rings, tz } = await respond(homeId, taskId, userId);
+    return { task, rings, completion: await getCompletion(db, completionId, tz) };
   }
 
   r.post('/tasks/:id/complete', auth, async (c) => {
@@ -82,7 +87,7 @@ export function completionRoutes(deps: AppDeps) {
       ]);
       return { id, created: true };
     });
-    return c.json(await respond(homeId, c.req.param('id'), userId, result.id), result.created ? 201 : 200);
+    return c.json(await respondWithCompletion(homeId, c.req.param('id'), userId, result.id), result.created ? 201 : 200);
   });
 
   r.post('/tasks/:id/skip', auth, async (c) => {
@@ -99,7 +104,7 @@ export function completionRoutes(deps: AppDeps) {
       ]);
       return completionId;
     });
-    return c.json(await respond(homeId, c.req.param('id'), userId, id), 201);
+    return c.json(await respondWithCompletion(homeId, c.req.param('id'), userId, id), 201);
   });
 
   r.delete('/completions/:id', auth, async (c) => {
@@ -127,8 +132,8 @@ export function completionRoutes(deps: AppDeps) {
       await q.query('delete from completions where id = $1', [completionId]);
       return completion!.task_id;
     });
-    const { task, rings } = await respond(homeId, taskId, userId, null);
-    return c.json({ task, rings });
+    const { task, rings } = await respond(homeId, taskId, userId);
+    return c.json({ task, rings } satisfies UndoResultDto);
   });
 
   r.get('/tasks/:id/history', auth, async (c) => {

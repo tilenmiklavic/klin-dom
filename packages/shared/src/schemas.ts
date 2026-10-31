@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Rings } from './rings.js';
 
 export function isValidTimezone(tz: string): boolean {
   try {
@@ -145,3 +146,57 @@ export const SuggestionCatalog = z.object({
   sharedTasks: z.array(SuggestedTask.extend({ roomKeys: z.array(z.string()).min(1) })),
 });
 export type SuggestionCatalog = z.infer<typeof SuggestionCatalog>;
+
+// Responses without a request-side schema
+
+export interface UserDto {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+}
+
+export interface BootstrapDto {
+  user: UserDto;
+  homes: { id: string; name: string; role: Role }[];
+}
+
+export interface InviteDto {
+  id: string;
+  code: string;
+  url: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface InvitePreviewDto {
+  homeName: string;
+  inviterName: string | null;
+}
+
+export interface CompletionResultDto {
+  task: TaskDto;
+  rings: Rings;
+  completion: CompletionDto;
+}
+
+export interface UndoResultDto {
+  task: TaskDto;
+  rings: Rings;
+}
+
+export interface DashboardDto {
+  rings: Rings;
+  dueToday: TaskDto[];
+  doneToday: (CompletionDto & { taskName: string; taskIcon: IconName; roomNames: string[] })[];
+}
+
+export interface StatsDto {
+  from: string;
+  to: string;
+  total: number;
+  perMember: { userId: string; name: string; done: number; onTime: number }[];
+  perRoom: { roomId: string; name: string; done: number }[];
+  doneForOthers: { byUserId: string; forUserId: string; count: number }[];
+  perDay: { date: string; done: number }[];
+}
