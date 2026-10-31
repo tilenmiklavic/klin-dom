@@ -17,6 +17,8 @@ export interface TaskRowProps {
   onPress: () => void;
   onLongPress?: () => void;
   busy?: boolean;
+  /** Accessible label for the tick ring (translated by the caller). Falls back to `name`. */
+  tickLabel?: string;
 }
 
 export function TaskRow({
@@ -30,13 +32,10 @@ export function TaskRow({
   onPress,
   onLongPress,
   busy,
+  tickLabel,
 }: TaskRowProps) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={name}
-      onPress={onPress}
-      onLongPress={onLongPress}
+    <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -50,46 +49,61 @@ export function TaskRow({
         boxShadow: tokens.shadow.card,
       }}
     >
-      <View
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={name}
+        accessibilityHint={caption}
+        onPress={onPress}
+        onLongPress={onLongPress}
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: tokens.radius.pill,
+          flex: 1,
+          minWidth: 0,
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: tokens.color.surfaceSunken,
+          gap: tokens.space[3],
         }}
       >
-        <Icon name={icon} size={18} />
-      </View>
-      <View testID="task-row-text" style={{ flex: 1, minWidth: 0 }}>
-        <KText
-          variant="body"
-          color={done ? 'inkMuted' : 'ink'}
-          numberOfLines={1}
+        <View
           style={{
-            fontFamily: tokens.type.heading.fontFamily,
-            fontWeight: '500',
-            textDecorationLine: done ? 'line-through' : 'none',
+            width: 36,
+            height: 36,
+            borderRadius: tokens.radius.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: tokens.color.surfaceSunken,
           }}
         >
-          {name}
-        </KText>
-        <KText
-          variant="caption"
-          color={captionTone === 'due' ? 'brandStrong' : 'inkMuted'}
-          numberOfLines={1}
-        >
-          {caption}
-        </KText>
-      </View>
-      {assignee ? <Avatar name={assignee.initial} size={22} /> : null}
+          <Icon name={icon} size={18} />
+        </View>
+        <View testID="task-row-text" style={{ flex: 1, minWidth: 0 }}>
+          <KText
+            variant="body"
+            color={done ? 'inkMuted' : 'ink'}
+            numberOfLines={1}
+            style={{
+              fontFamily: tokens.type.heading.fontFamily,
+              fontWeight: '500',
+              textDecorationLine: done ? 'line-through' : 'none',
+            }}
+          >
+            {name}
+          </KText>
+          <KText
+            variant="caption"
+            color={captionTone === 'due' ? 'brandStrong' : 'inkMuted'}
+            numberOfLines={1}
+          >
+            {caption}
+          </KText>
+        </View>
+        {assignee ? <Avatar name={assignee.initial} size={22} /> : null}
+      </Pressable>
       <TickRing
         done={done}
         disabled={busy}
         onPress={onToggle}
-        accessibilityLabel={name}
+        accessibilityLabel={tickLabel ?? name}
       />
-    </Pressable>
+    </View>
   );
 }

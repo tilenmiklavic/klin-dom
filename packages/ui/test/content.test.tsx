@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View } from 'react-native';
 import { TaskRow } from '../src/TaskRow';
@@ -63,6 +63,23 @@ describe('TaskRow', () => {
     await rerender(<TaskRow {...base} done={false} onToggle={onToggle} busy />);
     await fireEvent.press(screen.getByRole('checkbox'));
     expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the tick ring a sibling of the row button, each pressing independently', async () => {
+    const onToggle = jest.fn();
+    const onPress = jest.fn();
+    await render(
+      <TaskRow {...base} onPress={onPress} done={false} onToggle={onToggle} tickLabel="Mark done" />,
+    );
+    const button = screen.getByRole('button');
+    expect(within(button).queryByRole('checkbox')).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Mark done' })).toBeTruthy();
+    await fireEvent.press(button);
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('checkbox'));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('shows the assignee initial', async () => {
