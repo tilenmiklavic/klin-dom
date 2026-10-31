@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { onlineManager, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '@klindom/shared';
 import { Button, KText, ListGroup, ListRow, Screen, Sheet, TextField, tokens, useToast } from '@klindom/ui';
 import { useAuth } from '../../../src/auth/AuthProvider';
+import { apiErrorText } from '../../../src/errors/apiErrorText';
 import { useBootstrap, useDeleteMe, useUpdateMe } from '../../../src/data/homes';
 
 export default function Account() {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { signOut } = useAuth();
   const current = useBootstrap().data?.user.displayName ?? '';
   const update = useUpdateMe();
@@ -18,6 +20,8 @@ export default function Account() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState(false);
+  const deleting = useRef(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setName(current);
@@ -41,15 +45,25 @@ export default function Account() {
   };
 
   const doDelete = async () => {
-    setConfirming(false);
+    if (deleting.current) return;
+    deleting.current = true;
+    setBusy(true);
+    // Nothing else may call the API with the still-valid token between the delete and the sign-out
+    // (the API would create the user again): stop what is in flight and pause polling and refetches.
+    onlineManager.setOnline(false);
     try {
+      await queryClient.cancelQueries();
       await del.mutateAsync();
+      // Signing out clears the session, the cached data and the chosen home; the auth gate shows Welcome.
+      await signOut();
     } catch (e) {
-      toast.show({ message: e instanceof ApiError && e.code === 'transfer_required' ? t('profile.transferRequired') : t('errors.saveFailed') });
-      return;
+      setConfirming(false); // a toast hides beneath an open sheet
+      toast.show({ message: apiErrorText(t, e, { fallback: 'errors.saveFailed' }) });
+    } finally {
+      onlineManager.setOnline(true);
+      deleting.current = false;
+      setBusy(false);
     }
-    // Signing out clears the session, the cached data and the chosen home; the auth gate shows Welcome.
-    await signOut();
   };
 
   return (
@@ -78,13 +92,13 @@ export default function Account() {
         <ListRow label={t('profile.deleteAccount')} destructive onPress={() => setConfirming(true)} />
       </ListGroup>
 
-      <Sheet visible={confirming} onClose={() => setConfirming(false)} title={t('profile.deleteAccountTitle')} closeLabel={t('common.close')}>
+      <Sheet visible={confirming} onClose={() => !busy && setConfirming(false)} title={t('profile.deleteAccountTitle')} closeLabel={t('common.close')}>
         <View style={{ gap: tokens.space[4] }}>
           <KText variant="body" color="inkMuted">
             {t('profile.deleteAccountBody')}
           </KText>
-          <Button label={t('profile.deleteAccount')} loading={del.isPending} onPress={() => void doDelete()} />
-          <Button variant="secondary" label={t('profile.keep')} onPress={() => setConfirming(false)} />
+          <Button label={t('profile.deleteAccount')} loading={busy} onPress={() => void doDelete()} />
+          <Button variant="secondary" label={t('profile.keep')} disabled={busy} onPress={() => setConfirming(false)} />
         </View>
       </Sheet>
     </Screen>

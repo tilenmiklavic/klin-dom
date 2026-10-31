@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ApiError, localDate, type RoomDto } from '@klindom/shared';
+import { localDate, type RoomDto } from '@klindom/shared';
 import { Button, KText, RoomCard, Screen, tokens, useToast } from '@klindom/ui';
 import { ReorderList } from '../../../src/components/rooms/ReorderList';
 import { useStatusText } from '../../../src/components/rooms/useStatusText';
+import { apiErrorText } from '../../../src/errors/apiErrorText';
 import { useHome } from '../../../src/data/homes';
 import { useReorderRooms, useRooms } from '../../../src/data/rooms';
 import { useTasks } from '../../../src/data/tasks';
@@ -48,7 +49,7 @@ export default function Rooms() {
       try {
         await reorder.mutateAsync(order.map((r) => r.id));
       } catch (e) {
-        toast.show({ message: e instanceof ApiError && (e.status === 400 || e.status === 409) ? e.message : t('errors.saveFailed') });
+        toast.show({ message: apiErrorText(t, e, { fallback: 'errors.saveFailed' }) });
         return;
       }
       toast.show({ message: t('roomsTab.orderSaved') });

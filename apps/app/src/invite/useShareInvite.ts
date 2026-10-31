@@ -3,6 +3,13 @@ import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '@klindom/ui';
 
+/** Copies an invite link; the caller says so in its own UI. */
+export function useCopyInviteLink() {
+  return async (link: string) => {
+    await Clipboard.setStringAsync(link);
+  };
+}
+
 /** Opens the system share sheet for an invite link; falls back to copying the link. */
 export function useShareInvite(homeName: string) {
   const { t } = useTranslation();

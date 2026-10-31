@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ApiError, iconNames, type IconName, type RoomDto } from '@klindom/shared';
+import { iconNames, type IconName, type RoomDto } from '@klindom/shared';
 import { Button, ChoiceChips, KText, Screen, Sheet, TextField, tokens, useToast } from '@klindom/ui';
 import { Field } from '../src/components/tasks/Field';
+import { apiErrorText } from '../src/errors/apiErrorText';
 import { useArchiveRoom, useCreateRoom, useRooms, useUpdateRoom } from '../src/data/rooms';
 import { useCurrentHome } from '../src/state/currentHome';
 
@@ -74,7 +75,7 @@ function EditorForm({ homeId, room, close }: { homeId: string | null; room?: Roo
     try {
       await archive.mutateAsync();
     } catch (e) {
-      toast.show({ message: e instanceof ApiError && e.status === 409 ? e.message : t('errors.saveFailed') });
+      toast.show({ message: apiErrorText(t, e, { fallback: 'errors.saveFailed' }) });
       return;
     }
     toast.show({ message: t('roomsTab.archived') });

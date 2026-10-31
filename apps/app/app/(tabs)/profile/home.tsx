@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '@klindom/shared';
 import { Button, KText, ListGroup, ListRow, Screen, Sheet, TextField, tokens, useToast } from '@klindom/ui';
+import { apiErrorText } from '../../../src/errors/apiErrorText';
 import { useDeleteHome, useHome, useLeaveHome, useRefreshBootstrap, useUpdateHome } from '../../../src/data/homes';
 import { currentHomeStore, useCurrentHome } from '../../../src/state/currentHome';
 
@@ -60,7 +60,7 @@ export default function HomeSettings() {
     try {
       await leave.mutateAsync();
     } catch (e) {
-      toast.show({ message: e instanceof ApiError && e.code === 'transfer_required' ? t('profile.transferRequired') : t('errors.saveFailed') });
+      toast.show({ message: apiErrorText(t, e, { fallback: 'errors.saveFailed' }) });
       return;
     }
     await goneFromHome(t('profile.left', { home: homeName }));
@@ -72,7 +72,7 @@ export default function HomeSettings() {
     try {
       await del.mutateAsync(typed);
     } catch (e) {
-      toast.show({ message: e instanceof ApiError && e.status === 400 ? e.message : t('errors.saveFailed') });
+      toast.show({ message: apiErrorText(t, e, { fallback: 'errors.saveFailed' }) });
       return;
     }
     await goneFromHome(t('profile.homeDeleted', { home: homeName }));

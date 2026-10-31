@@ -87,6 +87,7 @@ let completeFails: boolean;
 let dashStatus: number;
 let mineDash: Dash | null;
 let dashHang: boolean;
+let undone: boolean;
 const baseDash = (): Dash => ({ rings: rings(), dueToday: [dishes, vacuum, hob], doneToday: [doneRow] });
 
 const defaultFetch = async (url: string, init?: RequestInit) => {
@@ -121,6 +122,8 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
     return json(200, { task: t, rings: dash.rings, completion: { ...doneRow, id: 'c1', taskId: id } });
   }
   if (url.endsWith('/completions/c1') && method === 'DELETE') {
+    if (undone) return json(404, { error: { code: 'not_found', message: 'gone' } });
+    undone = true;
     dash = baseDash();
     return json(200, { task: dishes, rings: dash.rings });
   }
@@ -153,6 +156,7 @@ beforeEach(async () => {
   dashStatus = 200;
   mineDash = null;
   dashHang = false;
+  undone = false;
   fetchMock.mockImplementation(defaultFetch);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
@@ -199,6 +203,43 @@ describe('home dashboard', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(calls(/\/completions\/c1$/, 'DELETE')).toHaveLength(1));
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Mark Wash the dishes done' })).toBeTruthy());
+  });
+
+  it('does nothing when Undo on the toast is pressed after the ring already undid it', async () => {
+    await renderApp();
+    await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes done' }));
+    const toastUndo = await screen.findByRole('button', { name: 'Undo' });
+    await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes not done' }));
+    await waitFor(() => expect(calls(/\/completions\/c1$/, 'DELETE')).toHaveLength(1));
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Mark Wash the dishes done' })).toBeTruthy());
+    await fireEvent.press(toastUndo);
+    await act(async () => {});
+    expect(calls(/\/completions\/c1$/, 'DELETE')).toHaveLength(1);
+    expect(screen.queryByText('Couldn’t save that — try again')).toBeNull();
+    // The row stays a single due row and the rings did not move again.
+    expect(screen.getAllByText('Wash the dishes')).toHaveLength(1);
+    expect(screen.getByRole('checkbox', { name: 'Mark Wash the dishes done' })).toBeTruthy();
+    expect(screen.getByText('4')).toBeTruthy();
+  });
+
+  it('keeps a failed undo from resurrecting a row in a cache that never listed it', async () => {
+    mineDash = { rings: rings(), dueToday: [hob], doneToday: [] };
+    await renderApp();
+    await screen.findByText('Wash the dishes');
+    await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
+    await waitFor(() => expect(screen.queryByText('Wash the dishes')).toBeNull());
+    await fireEvent.press(screen.getByRole('tab', { name: 'All' }));
+    await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes done' }));
+    await screen.findByRole('checkbox', { name: 'Mark Wash the dishes not done' });
+    // From here the caches are the only source of truth, and the server refuses the undo.
+    dashHang = true;
+    undone = true;
+    await fireEvent.press(screen.getByRole('checkbox', { name: 'Mark Wash the dishes not done' }));
+    await screen.findByText('Couldn’t save that — try again');
+    await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
+    await act(async () => {});
+    expect(screen.queryByText('Wash the dishes')).toBeNull();
+    expect(screen.getByText('4')).toBeTruthy();
   });
 
   it('rolls a failed tick back and says so', async () => {

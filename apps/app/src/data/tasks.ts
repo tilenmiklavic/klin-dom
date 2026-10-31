@@ -54,6 +54,8 @@ interface TickOp<V, R> {
   /** Patch applied once the server answered (for every scope). */
   settle?: (v: V, r: R) => Patch;
   rings: (r: R) => DashboardDto['rings'];
+  /** True when the change already holds in every cached dashboard, so there is nothing to send. */
+  alreadyDone?: (v: V, cached: DashboardDto[]) => boolean;
 }
 
 /**
@@ -85,6 +87,8 @@ function useTickOp<V, R>(homeId: string | null, op: TickOp<V, R>) {
         const before = qc.getQueriesData<DashboardDto>({
           queryKey: dashboardKey(homeId),
         });
+        const cached = before.flatMap(([, d]) => (d ? [d] : []));
+        if (o.alreadyDone && cached.length > 0 && o.alreadyDone(v, cached)) return null;
         patchDashboards(qc, homeId, o.optimistic(v, { id: me?.id ?? '', name: me?.displayName ?? '' }));
         try {
           const result = await o.call(api, v);
@@ -180,21 +184,26 @@ export function useSkipTask(homeId: string | null) {
   return { skip: run, pending };
 }
 
+const holds = (d: DashboardDto, c: Done) => d.doneToday.some((x) => x.id === c.id);
 /** Undoes a completion: the row leaves "done" and the rings step back; the refetch returns the task to the list. */
 export function useUndoCompletion(homeId: string | null) {
   const { run, pending } = useTickOp<Done, UndoResultDto>(homeId, {
     key: (c) => c.id,
     call: (api, c) => api.undoCompletion(c.id),
-    optimistic: (c) => (d) => ({
-      ...d,
-      doneToday: d.doneToday.filter((x) => x.id !== c.id),
-      rings: bump(d.rings, -1),
-    }),
-    revert: (c) => (d) => ({
-      ...d,
-      doneToday: d.doneToday.some((x) => x.id === c.id) ? d.doneToday : [...d.doneToday, c],
-      rings: bump(d.rings, 1),
-    }),
+    // Only caches that list the completion change; a second Undo for one that is already gone sends nothing.
+    alreadyDone: (c, cached) => cached.every((d) => !holds(d, c)),
+    optimistic: (c) => (d) => {
+      if (!holds(d, c)) return d;
+      return { ...d, doneToday: d.doneToday.filter((x) => x.id !== c.id), rings: bump(d.rings, -1) };
+    },
+    revert: (c, before) => (d) => {
+      if (!holds(before, c)) return d;
+      return {
+        ...d,
+        doneToday: d.doneToday.some((x) => x.id === c.id) ? d.doneToday : [...d.doneToday, c],
+        rings: bump(d.rings, 1),
+      };
+    },
     settle: (_c, r) => (d) => ({
       ...d,
       dueToday: d.dueToday.some((x) => x.id === r.task.id) ? d.dueToday : [r.task, ...d.dueToday],
