@@ -53,7 +53,7 @@ export async function tokenFor(sub: string, claims: { email?: string; name?: str
 }
 
 export function authed(app: Hono<any>, token: string) {
-  const send = (method: string, path: string, body?: unknown) =>
+  const send = async (method: string, path: string, body?: unknown): Promise<Response> =>
     app.request(path, {
       method,
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -102,4 +102,13 @@ export async function insertTask(homeId: string, createdBy: string, opts: { assi
   );
   await db.query('insert into task_rooms (task_id, room_id) values ($1, $2)', [task!.id, room!.id]);
   return task!.id;
+}
+
+/** A home with a Kitchen and a Bathroom, created through the API. */
+export async function setupHomeWithRooms(app: Hono<any>) {
+  const ctx = await setupHome(app);
+  const post = async (body: unknown) => (await ctx.owner.client.post(`/homes/${ctx.homeId}/rooms`, body)).json();
+  const kitchen = (await post({ name: 'Kitchen', icon: 'dishes' })) as { id: string };
+  const bath = (await post({ name: 'Bathroom', icon: 'spray' })) as { id: string };
+  return { ...ctx, kitchen, bath };
 }

@@ -8,6 +8,7 @@ import { homeRoutes } from './routes/homes.js';
 import { inviteRoutes } from './routes/invites.js';
 import { meRoutes } from './routes/me.js';
 import { roomRoutes } from './routes/rooms.js';
+import { taskRoutes } from './routes/tasks.js';
 
 export interface AppDeps {
   clock: Clock;
@@ -32,6 +33,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   app.route('/', homeRoutes(deps));
   app.route('/', inviteRoutes(deps));
   app.route('/', roomRoutes(deps));
+  app.route('/', taskRoutes(deps));
   app.notFound((c) => c.json(errorBody('not_found', 'Not found'), 404));
   app.onError(errorHandler);
   return app;

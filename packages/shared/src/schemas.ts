@@ -73,3 +73,44 @@ export interface RoomDto {
   icon: IconName;
   sortOrder: number;
 }
+
+// Tasks
+
+export const IntervalUnitSchema = z.enum(['day', 'week', 'month']);
+
+export const TaskInput = z.object({
+  name: z.string().trim().min(1).max(60),
+  icon: IconNameSchema,
+  notes: z.string().max(500).nullish(),
+  roomIds: z.array(z.string().uuid()).min(1),
+  intervalCount: z.number().int().min(1).max(365),
+  intervalUnit: IntervalUnitSchema,
+  startDate: IsoDateSchema.optional(),
+  dueTime: TimeOfDay.nullish(),
+  assigneeId: z.string().uuid().nullish(),
+  reminderOffsets: z
+    .array(z.number().int().min(0).max(10080))
+    .max(5)
+    .refine((xs) => new Set(xs).size === xs.length, 'Reminder offsets must be unique')
+    .optional(),
+});
+export type TaskInput = z.infer<typeof TaskInput>;
+export const UpdateTaskInput = TaskInput.omit({ startDate: true }).partial();
+export const MuteInput = z.object({ muted: z.boolean() });
+
+export interface TaskDto {
+  id: string;
+  name: string;
+  icon: IconName;
+  notes: string | null;
+  rooms: { id: string; name: string; icon: IconName }[];
+  intervalCount: number;
+  intervalUnit: 'day' | 'week' | 'month';
+  dueTime: string | null;
+  assigneeId: string | null;
+  nextDueDate: string;
+  lastCompletedAt: string | null;
+  reminderOffsets: number[];
+  mutedByMe: boolean;
+  overdue: boolean;
+}
