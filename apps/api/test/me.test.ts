@@ -65,7 +65,7 @@ describe('account', () => {
     expect(row).toMatchObject({ deleted_at: null, display_name: 'Tilen' });
   });
 
-  it('deletes a plain member, anonymises them and blocks their token', async () => {
+  it('deletes a plain member, tombstones them and lets the identity sign up fresh', async () => {
     const { setupHomeWithRooms, addMember, signIn, tokenFor: tf } = await import('./helpers.js');
     const { insertTask } = await import('./helpers.js');
     const a = createApp(testDeps());
@@ -90,8 +90,13 @@ describe('account', () => {
     const history = (await (await owner.client.get(`/tasks/${taskId}/history`)).json()) as { userName: string }[];
     expect(history[0]!.userName).toBe('Former member');
 
+    expect(row!.auth_subject).toBe(`deleted:${member.id}`);
+
     const again = await authed(a, await tf('member', { name: 'Mia' })).post('/me/bootstrap');
-    expect(again.status).toBe(401);
+    expect(again.status).toBe(200);
+    const body = await again.json();
+    expect(body.user.id).not.toBe(member.id);
+    expect(body.homes).toEqual([]);
   });
 
   it('deletes the home of a sole owner along with the account', async () => {

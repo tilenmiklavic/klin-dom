@@ -46,9 +46,9 @@ export function meRoutes(deps: AppDeps) {
       }
       await q.query('update invites set revoked_at = $2 where created_by = $1 and revoked_at is null', [user.id, deps.clock.now()]);
       await q.query('delete from push_subscriptions where user_id = $1', [user.id]);
-      // auth_subject stays: it is what keeps the old token from signing up a fresh account.
       await q.query(
-        `update users set display_name = null, email = null, avatar_url = null, deleted_at = now() where id = $1`,
+        `update users set display_name = null, email = null, avatar_url = null,
+           auth_subject = 'deleted:' || id, deleted_at = now() where id = $1`,
         [user.id],
       );
     });
