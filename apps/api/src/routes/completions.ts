@@ -7,6 +7,7 @@ import type { Db } from '../db.js';
 import { HttpError, parseBody } from '../errors.js';
 import { homeTimezone } from '../repo/homes.js';
 import { getCompletion, taskHistory } from '../repo/completions.js';
+import { loadRings } from '../repo/dashboard.js';
 import { queryTasks } from '../repo/tasks.js';
 
 interface LockedTask {
@@ -51,7 +52,8 @@ export function completionRoutes(deps: AppDeps) {
   async function respond(homeId: string, taskId: string, userId: string, completionId: string | null) {
     const tz = await homeTimezone(db, homeId);
     const [task] = await queryTasks(db, { homeId, userId, taskId }, localDate(clock.now(), tz));
-    return { task, completion: completionId ? await getCompletion(db, completionId, tz) : null };
+    const { rings } = await loadRings(db, homeId, userId, 'all', clock.now());
+    return { task, rings, completion: completionId ? await getCompletion(db, completionId, tz) : null };
   }
 
   r.post('/tasks/:id/complete', auth, async (c) => {
@@ -120,8 +122,8 @@ export function completionRoutes(deps: AppDeps) {
       await q.query('delete from completions where id = $1', [completionId]);
       return completion!.task_id;
     });
-    const { task } = await respond(homeId, taskId, userId, null);
-    return c.json({ task });
+    const { task, rings } = await respond(homeId, taskId, userId, null);
+    return c.json({ task, rings });
   });
 
   r.get('/tasks/:id/history', auth, async (c) => {
