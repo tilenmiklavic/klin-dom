@@ -5,6 +5,7 @@ import type { Config } from './config.js';
 import type { Db } from './db.js';
 import { errorBody, errorHandler } from './errors.js';
 import { homeRoutes } from './routes/homes.js';
+import { inviteRoutes } from './routes/invites.js';
 import { meRoutes } from './routes/me.js';
 
 export interface AppDeps {
@@ -28,6 +29,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   app.get('/healthz', (c) => c.json({ ok: true }));
   app.route('/', meRoutes(deps));
   app.route('/', homeRoutes(deps));
+  app.route('/', inviteRoutes(deps));
   app.notFound((c) => c.json(errorBody('not_found', 'Not found'), 404));
   app.onError(errorHandler);
   return app;
