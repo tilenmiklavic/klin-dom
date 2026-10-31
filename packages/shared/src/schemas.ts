@@ -53,3 +53,23 @@ export interface MemberDto {
   role: Role;
   joinedAt: string;
 }
+
+// Rooms
+
+export const iconNames = [
+  'sparkle', 'spray', 'broom', 'sponge', 'bucket', 'vacuum', 'laundry', 'dishes', 'window',
+  'home', 'calendar', 'checklist', 'timer', 'chat', 'stats', 'profile', 'mic',
+] as const;
+export type IconName = (typeof iconNames)[number];
+export const IconNameSchema = z.enum(iconNames);
+
+export const RoomInput = z.object({ name: z.string().trim().min(1).max(40), icon: IconNameSchema });
+export const UpdateRoomInput = RoomInput.partial();
+export const RoomOrderInput = z.object({ roomIds: z.array(z.string().uuid()) });
+
+export interface RoomDto {
+  id: string;
+  name: string;
+  icon: IconName;
+  sortOrder: number;
+}
