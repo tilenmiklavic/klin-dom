@@ -107,4 +107,30 @@ describe('account', () => {
     const [row] = await getTestDb().query('select 1 from homes where id = $1', [homeId]);
     expect(row).toBeUndefined();
   });
+
+  it('stays consistent when an invite accept races the owner deleting their account', async () => {
+    const { setupHome, signIn } = await import('./helpers.js');
+    for (let i = 0; i < 5; i++) {
+      await resetDb();
+      const a = createApp(testDeps());
+      const { owner, homeId } = await setupHome(a);
+      const joiner = await signIn(a, 'joiner', 'Joiner');
+      const invite = (await (await owner.client.post(`/homes/${homeId}/invites`)).json()) as { code: string };
+      const [del, acc] = await Promise.all([owner.client.del('/me'), joiner.client.post(`/invites/${invite.code}/accept`)]);
+      const db = getTestDb();
+      const members = await db.query<{ user_id: string; role: string }>('select user_id, role from home_members where home_id = $1', [homeId]);
+      const home = await db.query('select 1 from homes where id = $1', [homeId]);
+      if (del.status === 204) {
+        // Owner gone: either the home went with them (accept failed or came first and lost), or it never had members.
+        expect(members.some((m) => m.user_id === owner.id)).toBe(false);
+        if (members.length > 0) throw new Error('home with members but no owner');
+        expect(home).toHaveLength(0);
+      } else {
+        // Delete refused because the joiner got in first: home intact with owner and joiner.
+        expect(del.status).toBe(409);
+        expect(acc.status).toBe(200);
+        expect(members.map((m) => m.role).sort()).toEqual(['member', 'owner']);
+      }
+    }
+  });
 });
