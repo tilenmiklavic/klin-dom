@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, KText, tokens } from '@klindom/ui';
 import { useBootstrap } from '../data/useBootstrap';
 import { useAuth } from './AuthProvider';
+import { currentHomeStore } from '../state/currentHome';
 import { pendingInvite } from './pendingInvite';
 
 /**
@@ -18,10 +19,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const bootstrap = useBootstrap();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const group = useSegments()[0];
+  const segments = useSegments();
+  const group = segments[0];
+  // The invite step comes right after creating a home, so it must stay reachable once homes exist.
+  const inviting = group === '(onboarding)' && (segments as string[])[1] === 'invite';
 
   useEffect(() => {
-    if (status === 'signedOut') queryClient.clear();
+    if (status === 'signedOut') {
+      queryClient.clear();
+      currentHomeStore.clear();
+    }
   }, [status, queryClient]);
 
   const homes = bootstrap.data?.homes;
@@ -40,7 +47,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       }
       if (homes.length === 0) {
         if (group !== '(onboarding)' && group !== 'join') router.replace('/(onboarding)/start');
-      } else if (group === '(auth)' || group === '(onboarding)') {
+      } else if (group === '(auth)' || (group === '(onboarding)' && !inviting)) {
         router.replace('/(tabs)');
       }
     }
@@ -48,7 +55,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [status, homes, group, router]);
+  }, [status, homes, group, inviting, router]);
 
   // Show children only when the current route is where the session state says the user belongs;
   // otherwise hide them (kept mounted so navigation still works) so protected screens never flash.
@@ -56,7 +63,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   let belongs = false;
   if (status === 'signedOut') belongs = group === '(auth)';
   else if (status === 'signedIn' && homes) {
-    belongs = homes.length === 0 ? group === '(onboarding)' || group === 'join' : group !== '(auth)' && group !== '(onboarding)';
+    belongs = homes.length === 0 ? group === '(onboarding)' || group === 'join' : group !== '(auth)' && (group !== '(onboarding)' || inviting);
   }
   return (
     <>

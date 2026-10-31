@@ -35,12 +35,66 @@
     "generic": "Something went wrong. Please try again."
   },
   "onboarding": {
-    "title": "Set up your home"
+    "title": "Set up your home",
+    "hint": "Create a home for your household, or join one you’ve been invited to.",
+    "create": "Create a home",
+    "join": "Join a home"
   },
   "tabs": {
     "today": "Today"
   },
   "join": {
-    "title": "Joining a home"
+    "title": "Join a Home",
+    "hint": "Enter the invite code from your housemate. Capitals and dashes don’t matter.",
+    "codeLabel": "Invite code",
+    "codePlaceholder": "k7q-2mx",
+    "codeRequired": "Enter an invite code.",
+    "find": "Find invite",
+    "loading": "Joining a home",
+    "confirmTitle": "Join {{home}}?",
+    "invitedBy": "{{name}} invited you.",
+    "invited": "You’ve been invited.",
+    "confirm": "Join home",
+    "notNow": "Not now",
+    "invalidTitle": "Invite Not Found",
+    "tryAnother": "Try another code"
+  },
+  "create": {
+    "title": "Name Your Home",
+    "hint": "You can change this later.",
+    "nameLabel": "Home name",
+    "nameRequired": "Give your home a name.",
+    "timezone": "Timezone",
+    "withSuggestions": "Start with suggestions",
+    "fromScratch": "Start from scratch",
+    "defaultName": "{{name}}’s home",
+    "defaultNameFallback": "My home"
+  },
+  "rooms": {
+    "title": "Pick Your Rooms",
+    "hint": "Choose the rooms you have and how many of each. We’ll suggest small jobs for them.",
+    "fewer": "Fewer {{room}}",
+    "more": "More {{room}}",
+    "continue": "Review tasks"
+  },
+  "review": {
+    "title": "Review Tasks",
+    "hint": "Untick anything you don’t want. You can add more later.",
+    "shared": "Shared Tasks",
+    "create": "Create home"
+  },
+  "invite": {
+    "title": "Invite Your Household",
+    "hint": "Share this link so they can join your home. You can also do it later.",
+    "code": "Invite code",
+    "share": "Share invite",
+    "copied": "Invite link copied",
+    "message": "Join {{home}} on KlinDom.",
+    "failed": "Couldn’t create an invite link.",
+    "messageWithLink": "Join {{home}} on KlinDom: {{url}}"
+  },
+  "common": {
+    "back": "Back",
+    "continue": "Continue"
   }
 }
