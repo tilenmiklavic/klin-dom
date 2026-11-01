@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { AwardKind } from './awards.js';
 import type { Rings } from './rings.js';
 
 export function isValidTimezone(tz: string): boolean {
@@ -54,6 +55,38 @@ export interface MemberDto {
   role: Role;
   joinedAt: string;
 }
+
+export interface MemberSettingsDto {
+  notificationsEnabled: boolean;
+  defaultReminderTime: string; // HH:mm
+}
+
+export const MemberSettingsInput = z
+  .object({ notificationsEnabled: z.boolean(), defaultReminderTime: TimeOfDay })
+  .partial();
+
+// Push
+
+/** Push services are public https hosts; refusing IP literals and localhost keeps the jobs off internal hosts. */
+export function isPublicHttpsUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  // WHATWG URL normalises IPv4 spellings (0x7f.1, 2130706433) to dotted quads and keeps IPv6 in brackets.
+  const host = url.hostname.replace(/\.$/, '').toLowerCase();
+  const ipLiteral = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith('[');
+  const local = host === 'localhost' || host.endsWith('.localhost');
+  return url.protocol === 'https:' && !ipLiteral && !local;
+}
+
+export const PushSubscriptionInput = z.object({
+  endpoint: z.string().url().refine(isPublicHttpsUrl, 'Push endpoint must be a public https URL'),
+  keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
+  userAgent: z.string().max(300).optional(),
+});
 
 // Rooms
 
@@ -187,8 +220,29 @@ export interface UndoResultDto {
 
 export interface DashboardDto {
   rings: Rings;
+  /** Consecutive days the household closed its today ring. */
+  streak: number;
   dueToday: TaskDto[];
   doneToday: (CompletionDto & { taskName: string; taskIcon: IconName; roomNames: string[] })[];
+  /** Awards earned since this member last marked awards as seen. */
+  newAwards: AwardDto[];
+}
+
+export interface AwardDto {
+  id: string;
+  kind: AwardKind;
+  /** Null for household awards. */
+  userId: string | null;
+  /** "Former member" when that person has left; null for household awards. */
+  userName: string | null;
+  earnedAt: string;
+}
+
+export interface HistoryDto {
+  month: string;
+  days: { date: string; done: number; total: number; closed: boolean }[];
+  today: { date: string; done: number; total: number };
+  awards: AwardDto[];
 }
 
 export interface StatsDto {

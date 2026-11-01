@@ -67,6 +67,7 @@ it('editing a task does not revert a completion that landed meanwhile', async ()
       }
       return base.tx(fn);
     },
+    withAdvisoryLock: (key, fn) => base.withAdvisoryLock(key, fn),
   };
   const raceApp = createApp(testDeps({ clock, db: racing }));
   const { owner, task } = await dailyTask(raceApp);

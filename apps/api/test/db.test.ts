@@ -1,3 +1,4 @@
+import { connectionUrl, createDb } from '../src/db.js';
 import { getTestDb, resetDb } from './helpers.js';
 
 const db = getTestDb();
@@ -41,4 +42,43 @@ it('allows two done completions for the same due date (early completions)', asyn
   const taskId = await seedTask();
   await insertCompletion(taskId, 'done');
   await expect(insertCompletion(taskId, 'done')).resolves.toBeUndefined();
+});
+
+it('every table has RLS enabled', async () => {
+  const rows = await db.query<{ relname: string; relrowsecurity: boolean }>(
+    `select c.relname, c.relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relkind = 'r'`,
+  );
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.filter((r) => !r.relrowsecurity).map((r) => r.relname)).toEqual([]);
+});
+
+describe('createDb ssl', () => {
+  const sslOf = async (ssl?: 'off' | 'require' | 'verify') => {
+    const d = createDb('postgres://u:p@localhost:1/x', ssl ? { ssl } : undefined);
+    const options = (d.pool as unknown as { options: { ssl?: unknown } }).options;
+    await d.end();
+    return options.ssl;
+  };
+
+  it('createDb passes ssl options to the pool', async () => {
+    expect(await sslOf()).toBeFalsy();
+    expect(await sslOf('off')).toBeFalsy();
+    expect(await sslOf('require')).toEqual({ rejectUnauthorized: false });
+    expect(await sslOf('verify')).toBe(true);
+  });
+});
+
+describe('connectionUrl', () => {
+  // pg turns `sslmode=require` in the URL into strict verification, overriding DATABASE_SSL; the Supabase pooler then fails.
+  it('drops sslmode from the URL when DATABASE_SSL manages TLS', () => {
+    const url = 'postgresql://u:p@pooler.example.com:5432/postgres?sslmode=require&application_name=api';
+    expect(connectionUrl(url, 'require')).toBe('postgresql://u:p@pooler.example.com:5432/postgres?application_name=api');
+    expect(connectionUrl('postgresql://u:p@h:5432/db?sslmode=require', 'verify')).toBe('postgresql://u:p@h:5432/db');
+  });
+
+  it('leaves the URL alone when DATABASE_SSL is off', () => {
+    const url = 'postgres://klindom:klindom@postgres:5432/klindom?sslmode=disable';
+    expect(connectionUrl(url, 'off')).toBe(url);
+  });
 });

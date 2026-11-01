@@ -42,7 +42,25 @@ services:
       AUTH_ISSUER: ${AUTH_ISSUER:-}
       APP_URL: ${APP_URL:-http://localhost:8081}
       CRON_SECRET: ${CRON_SECRET:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     ports: ["8080:8080"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  # Runs the reminder/snapshot/award jobs every minute. Use it where no external cron hits /internal/run-reminders.
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgres://klindom:klindom@postgres:5432/klindom
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+    command: ["node", "dist/worker.cjs"]
     depends_on:
       migrate: { condition: service_completed_successfully }
 

@@ -7,6 +7,7 @@ import type { Db } from '../db.js';
 import { HttpError, parseBody } from '../errors.js';
 import { homeTimezone } from '../repo/homes.js';
 import { getCompletion, taskHistory } from '../repo/completions.js';
+import { evaluateAwards } from '../jobs/awards.js';
 import { loadRings } from '../repo/dashboard.js';
 import { queryTasks } from '../repo/tasks.js';
 
@@ -87,6 +88,14 @@ export function completionRoutes(deps: AppDeps) {
       ]);
       return { id, created: true };
     });
+    if (result.created) {
+      // Best-effort: an award hiccup must never fail a completion that already happened.
+      try {
+        await evaluateAwards(db, homeId, now);
+      } catch (err) {
+        console.error('award evaluation failed', err);
+      }
+    }
     return c.json(await respondWithCompletion(homeId, c.req.param('id'), userId, result.id), result.created ? 201 : 200);
   });
 

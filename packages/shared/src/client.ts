@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type {
   BootstrapDto,
+  HistoryDto,
   CompletionDto,
   CompletionResultDto,
   CreateHomeInput,
@@ -10,6 +11,9 @@ import type {
   InviteDto,
   InvitePreviewDto,
   MemberDto,
+  MemberSettingsDto,
+  MemberSettingsInput,
+  PushSubscriptionInput,
   RoomDto,
   StatsDto,
   SuggestionCatalog,
@@ -95,9 +99,16 @@ export function createApiClient(opts: ApiClientOptions) {
     updateHome: (homeId: string, patchBody: z.input<typeof UpdateHomeInput>) => patch<HomeDto>(`/homes/${homeId}`, patchBody),
     deleteHome: (homeId: string, confirmName: string) => del(`/homes/${homeId}`, { confirmName }),
     listMembers: (homeId: string) => get<MemberDto[]>(`/homes/${homeId}/members`),
+    memberSettings: (homeId: string) => get<MemberSettingsDto>(`/homes/${homeId}/members/me`),
+    updateMemberSettings: (homeId: string, input: z.input<typeof MemberSettingsInput>) =>
+      patch<MemberSettingsDto>(`/homes/${homeId}/members/me`, input),
     removeMember: (homeId: string, userId: string) => del(`/homes/${homeId}/members/${userId}`),
     leaveHome: (homeId: string) => post<{ homeDeleted: boolean }>(`/homes/${homeId}/leave`),
     transferHome: (homeId: string, userId: string) => post<HomeDto>(`/homes/${homeId}/transfer`, { userId }),
+
+    pushPublicKey: () => get<{ publicKey: string | null }>('/push/public-key'),
+    subscribePush: (input: z.input<typeof PushSubscriptionInput>) => post<{ id: string }>('/push/subscriptions', input),
+    unsubscribePush: (id: string) => del(`/push/subscriptions/${id}`),
 
     createInvite: (homeId: string) => post<InviteDto>(`/homes/${homeId}/invites`),
     listInvites: (homeId: string) => get<InviteDto[]>(`/homes/${homeId}/invites`),
@@ -127,6 +138,8 @@ export function createApiClient(opts: ApiClientOptions) {
     dashboard: (homeId: string, scope: Scope) => get<DashboardDto>(`/homes/${homeId}/dashboard${qs({ scope })}`),
     stats: (homeId: string, range: 'week' | 'month' | 'custom', from?: string, to?: string) =>
       get<StatsDto>(`/homes/${homeId}/stats${qs({ range, from, to })}`),
+    markAwardsSeen: (homeId: string) => post<void>(`/homes/${homeId}/awards/seen`),
+    history: (homeId: string, month: string) => get<HistoryDto>(`/homes/${homeId}/history${qs({ month })}`),
     suggestions: () => get<z.infer<typeof SuggestionCatalog>>('/suggestions'),
   };
 }

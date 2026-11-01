@@ -5,6 +5,7 @@ import { devVerifier } from '../src/auth/verify.js';
 import { FixedClock } from '../src/clock.js';
 import { loadConfig } from '../src/config.js';
 import { createDb, type Db } from '../src/db.js';
+import { memoryNotifier } from '../src/push/notifier.js';
 
 const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://klindom:klindom@localhost:54329/klindom_test';
@@ -36,6 +37,7 @@ export function testDeps(overrides: Partial<AppDeps> = {}): AppDeps {
     clock: new FixedClock(new Date('2026-10-31T09:00:00Z')),
     config: loadConfig({ AUTH_MODE: 'dev', AUTH_DEV_SECRET: TEST_SECRET, ALLOW_DEV_AUTH: 'true', APP_URL: 'http://localhost:8081' }),
     db: getTestDb(),
+    notifier: memoryNotifier(),
     verifier: devVerifier(TEST_SECRET),
     ...overrides,
   };

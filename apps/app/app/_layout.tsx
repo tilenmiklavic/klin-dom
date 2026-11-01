@@ -12,12 +12,14 @@ import { ToastProvider } from '@klindom/ui';
 import '../src/i18n';
 import { AuthGate } from '../src/auth/AuthGate';
 import { AuthProvider } from '../src/auth/AuthProvider';
+import { registerServiceWorker } from '../src/pwa/register';
 import { createQueryClient, subscribeAppFocus } from '../src/data/queryClient';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Geist_400Regular, Geist_500Medium, Geist_600SemiBold });
   const [queryClient] = useState(createQueryClient);
   useEffect(subscribeAppFocus, []);
+  useEffect(registerServiceWorker, []);
 
   if (!fontsLoaded) return null;
   return (

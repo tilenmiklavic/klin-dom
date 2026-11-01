@@ -1,4 +1,4 @@
-import { addInterval, dueMoment, isOverdue, localDate, nextDueAfterCompletion, weekBounds } from '../src/dates.js';
+import { addInterval, addMonths, monthGrid, dueMoment, isOverdue, localDate, nextDueAfterCompletion, weekBounds } from '../src/dates.js';
 
 describe('localDate', () => {
   it('uses the home timezone, not UTC, just after midnight (CEST)', () => {
@@ -52,5 +52,26 @@ describe('isOverdue', () => {
   });
   it('is not overdue on the due date', () => {
     expect(isOverdue('2026-10-31', '2026-10-31')).toBe(false);
+  });
+});
+
+describe('monthGrid', () => {
+  it('lists every date of the month with Monday-first leading blanks', () => {
+    const g = monthGrid('2026-10'); // 1 Oct 2026 is a Thursday
+    expect(g.leadingBlanks).toBe(3);
+    expect(g.dates).toHaveLength(31);
+    expect(g.dates[0]).toBe('2026-10-01');
+    expect(g.dates[30]).toBe('2026-10-31');
+  });
+  it('has no blanks when the month starts on a Monday and handles leap February', () => {
+    expect(monthGrid('2026-06').leadingBlanks).toBe(0);
+    expect(monthGrid('2028-02').dates).toHaveLength(29);
+  });
+});
+
+describe('addMonths', () => {
+  it('steps across year boundaries', () => {
+    expect(addMonths('2026-12', 1)).toBe('2027-01');
+    expect(addMonths('2026-01', -1)).toBe('2025-12');
   });
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,8 @@ import { Button, Celebration, EmptyState, KText, Screen, SegmentedControl, Sheet
 import { DueList } from '../../src/components/home/DueList';
 import { ErrorCard } from '../../src/components/ErrorCard';
 import { RingsCard } from '../../src/components/home/RingsCard';
+import { awardNameKey } from '../../src/awards/copy';
+import { useMarkAwardsSeen } from '../../src/data/awards';
 import { useDashboard, type Scope } from '../../src/data/dashboard';
 import { useHome, useMembers } from '../../src/data/homes';
 import { asDone, useCompleteTask, useSkipTask, useUndoCompletion } from '../../src/data/tasks';
@@ -28,6 +30,19 @@ export default function Home() {
   const { complete, pending: completing } = useCompleteTask(homeId);
   const { skip, pending: skipPending } = useSkipTask(homeId);
   const { undo, pending: undoing } = useUndoCompletion(homeId);
+
+  const markSeen = useMarkAwardsSeen(homeId);
+  // Award ids already celebrated: the dashboard polls and refetches on focus, so it can list one again.
+  const handledAwards = useRef(new Set<string>());
+  const newAwards = dashboard.data?.newAwards;
+  useEffect(() => {
+    const fresh = newAwards?.filter((a) => !handledAwards.current.has(a.id)) ?? [];
+    if (fresh.length === 0) return;
+    fresh.forEach((a) => handledAwards.current.add(a.id));
+    setCelebrating(true);
+    toast.show({ message: t('awards.newToast', { name: t(awardNameKey(fresh[0]!.kind)) }) });
+    void markSeen();
+  }, [newAwards, markSeen, toast, t]);
 
   const timezone = home.data?.timezone ?? null;
   const today = timezone ? localDate(new Date(Date.now()), timezone) : null;
@@ -63,6 +78,11 @@ export default function Home() {
             {today ? (
               <KText variant="body" color="inkMuted">
                 {formatLongDate(today)}
+              </KText>
+            ) : null}
+            {data.streak > 0 ? (
+              <KText variant="label" color="brandStrong">
+                {t('home.streak', { count: data.streak })}
               </KText>
             ) : null}
           </View>

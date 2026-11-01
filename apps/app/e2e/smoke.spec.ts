@@ -18,6 +18,10 @@ test('onboarding → tick → stats, and Home fits a 320px screen', async ({ pag
   await expect(page.getByText('Invite Your Household')).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
 
+  // Reminders step: skip.
+  await expect(page.getByText('Stay on top of chores')).toBeVisible();
+  await page.getByRole('button', { name: /Continue|Not now/ }).click();
+
   // Home
   await expect(page.getByText('Due Today')).toBeVisible();
   await expect(page.getByText('Dishes').first()).toBeVisible();
