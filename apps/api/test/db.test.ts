@@ -1,3 +1,4 @@
+import { createDb } from '../src/db.js';
 import { getTestDb, resetDb } from './helpers.js';
 
 const db = getTestDb();
@@ -50,4 +51,20 @@ it('every table has RLS enabled', async () => {
   );
   expect(rows.length).toBeGreaterThan(0);
   expect(rows.filter((r) => !r.relrowsecurity).map((r) => r.relname)).toEqual([]);
+});
+
+describe('createDb ssl', () => {
+  const sslOf = async (ssl?: 'off' | 'require' | 'verify') => {
+    const d = createDb('postgres://u:p@localhost:1/x', ssl ? { ssl } : undefined);
+    const options = (d.pool as unknown as { options: { ssl?: unknown } }).options;
+    await d.end();
+    return options.ssl;
+  };
+
+  it('createDb passes ssl options to the pool', async () => {
+    expect(await sslOf()).toBeFalsy();
+    expect(await sslOf('off')).toBeFalsy();
+    expect(await sslOf('require')).toEqual({ rejectUnauthorized: false });
+    expect(await sslOf('verify')).toBe(true);
+  });
 });

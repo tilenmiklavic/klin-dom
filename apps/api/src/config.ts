@@ -4,6 +4,7 @@ const ConfigSchema = z.object({
   NODE_ENV: z.string().default('development'),
   PORT: z.coerce.number().int().default(8080),
   DATABASE_URL: z.string().default('postgres://klindom:klindom@localhost:5432/klindom'),
+  DATABASE_SSL: z.enum(['off', 'require', 'verify']).default('off'),
   AUTH_MODE: z.enum(['jwks', 'dev']).default('jwks'),
   AUTH_JWKS_URL: z.string().url().optional(),
   AUTH_ISSUER: z.string().optional(),

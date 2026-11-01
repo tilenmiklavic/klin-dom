@@ -38,3 +38,14 @@ describe('loadWorkerConfig', () => {
     expect(() => loadWorkerConfig({ VAPID_PUBLIC_KEY: 'p', VAPID_PRIVATE_KEY: 'q', VAPID_SUBJECT: 'http://x.si' })).toThrow(/VAPID_SUBJECT/);
   });
 });
+
+describe('DATABASE_SSL', () => {
+  const base = { AUTH_MODE: 'dev', AUTH_DEV_SECRET: 's', ALLOW_DEV_AUTH: 'true' };
+
+  it('DATABASE_SSL defaults off and rejects unknown values', () => {
+    expect(loadConfig(base).DATABASE_SSL).toBe('off');
+    expect(loadConfig({ ...base, DATABASE_SSL: 'require' }).DATABASE_SSL).toBe('require');
+    expect(loadWorkerConfig({ DATABASE_SSL: 'verify' }).DATABASE_SSL).toBe('verify');
+    expect(() => loadConfig({ ...base, DATABASE_SSL: 'yes' })).toThrow();
+  });
+});

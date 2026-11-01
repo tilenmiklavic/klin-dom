@@ -33,9 +33,18 @@ function clientDb(client: pg.PoolClient): Db {
   };
 }
 
-export function createDb(url: string): Db & { end(): Promise<void> } {
-  const pool = new pg.Pool({ connectionString: url });
+export type DatabaseSsl = 'off' | 'require' | 'verify';
+
+/** `require` encrypts without verifying the certificate (Supabase pooler); `verify` also checks the chain. */
+function sslOption(mode: DatabaseSsl): pg.PoolConfig['ssl'] {
+  if (mode === 'require') return { rejectUnauthorized: false };
+  return mode === 'verify' ? true : undefined;
+}
+
+export function createDb(url: string, opts: { ssl?: DatabaseSsl } = {}): Db & { end(): Promise<void>; pool: pg.Pool } {
+  const pool = new pg.Pool({ connectionString: url, ssl: sslOption(opts.ssl ?? 'off') });
   return {
+    pool,
     async query<T>(sql: string, params?: unknown[]) {
       return (await pool.query(sql, params)).rows as T[];
     },

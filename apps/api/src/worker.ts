@@ -7,7 +7,7 @@ import { notifierFromConfig } from './push/notifier.js';
 const INTERVAL_MS = 60_000;
 
 const config = loadWorkerConfig();
-const db = createDb(config.DATABASE_URL);
+const db = createDb(config.DATABASE_URL, { ssl: config.DATABASE_SSL });
 const deps = { db, clock: systemClock, notifier: notifierFromConfig(config) };
 if (!config.VAPID_PUBLIC_KEY) console.warn('Worker: VAPID keys are not set, reminders will not be delivered');
 
