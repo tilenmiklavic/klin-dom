@@ -125,6 +125,7 @@ export default function Profile() {
         <ListRow label={t('profile.members')} onPress={() => router.push('/profile/members')} />
         <ListRow label={t('profile.invite')} onPress={() => void inviteSomeone()} />
         <ListRow label={t('profile.homeSettings')} onPress={() => router.push('/profile/home')} />
+        <ListRow label={t('profile.awardsHistory')} onPress={() => router.push('/profile/awards')} />
       </ListGroup>
 
       <ListGroup title={t('profile.you')}>

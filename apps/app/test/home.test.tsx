@@ -348,3 +348,33 @@ describe('home dashboard', () => {
     await waitFor(() => expect(app.getPathname()).toBe('/tasks'));
   });
 });
+
+describe('streak and awards', () => {
+  it.each([
+    [6, '6-day streak'],
+    [1, '1-day streak'],
+  ])('shows streak %i in the subline', async (streak, text) => {
+    dash = { ...baseDash(), streak };
+    await renderApp();
+    expect(await screen.findByText(text)).toBeTruthy();
+  });
+
+  it('shows no streak line at 0', async () => {
+    await renderApp();
+    await screen.findByText('Saturday, 31 October');
+    expect(screen.queryByText(/-day streak/)).toBeNull();
+  });
+
+  it('celebrates a new award with a toast, marks it seen once, and not again on refetch', async () => {
+    dash = { ...baseDash(), newAwards: [{ id: 'a1', kind: 'streak_7', userId: null, userName: null, earnedAt: '2026-10-31T08:00:00.000Z' }] };
+    await renderApp();
+    expect(await screen.findByText('celebration-visible')).toBeTruthy();
+    expect(await screen.findByText('New award: 7-day streak')).toBeTruthy();
+    await waitFor(() => expect(calls(/\/homes\/h1\/awards\/seen$/, 'POST')).toHaveLength(1));
+    // The server may still list it on the next poll (e.g. a slow write); it must not fire again.
+    await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'All' }));
+    await act(async () => {});
+    expect(calls(/\/awards\/seen$/, 'POST')).toHaveLength(1);
+  });
+});

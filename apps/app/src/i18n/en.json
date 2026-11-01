@@ -162,7 +162,8 @@
     "tickUndone": "Mark {{name}} not done",
     "completed": "{{name}} done",
     "undo": "Undo",
-    "skip": "Skip this time"
+    "skip": "Skip this time",
+    "streak": "{{count}}-day streak"
   },
   "tasks": {
     "add": "Add a task",
@@ -353,6 +354,35 @@
     "deleteAccount": "Delete account",
     "deleteAccountTitle": "Delete your account?",
     "deleteAccountBody": "This permanently removes your account. Homes you share with others stay with them.",
-    "inviteTitle": "Invite Someone"
+    "inviteTitle": "Invite Someone",
+    "awardsHistory": "Awards & history"
+  },
+  "awards": {
+    "title": "Awards & history",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "dayLabel": "{{date}}, {{done}} of {{total}} done",
+    "dayNone": "{{date}}, no tasks",
+    "newToast": "New award: {{name}}",
+    "notYet": "Not yet",
+    "awardsHeading": "Awards",
+    "loadFailed": "Couldn’t load the history",
+    "weekdays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "kind": {
+      "first_task": "First task done",
+      "first_full_week": "First full week",
+      "streak_7": "7-day streak",
+      "streak_30": "30-day streak",
+      "all_fresh": "Every room fresh",
+      "tasks_100": "100 tasks done"
+    }
   }
 }

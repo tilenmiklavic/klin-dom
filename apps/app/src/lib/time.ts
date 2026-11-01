@@ -22,3 +22,9 @@ export function formatShortDate(date: IsoDate): string {
   const [y, m, d] = date.split('-').map(Number) as [number, number, number];
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
 }
+
+/** "October 2026" for a `YYYY-MM` month. */
+export function formatMonth(month: string): string {
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  return new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, 1)));
+}
