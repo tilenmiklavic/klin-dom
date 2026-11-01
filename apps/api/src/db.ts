@@ -41,8 +41,21 @@ function sslOption(mode: DatabaseSsl): pg.PoolConfig['ssl'] {
   return mode === 'verify' ? true : undefined;
 }
 
+/**
+ * pg reads `sslmode` from the URL and lets it override the `ssl` option (`require` becomes strict verification),
+ * so when DATABASE_SSL manages TLS the URL's own sslmode is dropped.
+ */
+export function connectionUrl(url: string, mode: DatabaseSsl): string {
+  if (mode === 'off') return url;
+  const parsed = new URL(url);
+  if (!parsed.searchParams.has('sslmode')) return url;
+  parsed.searchParams.delete('sslmode');
+  return parsed.toString();
+}
+
 export function createDb(url: string, opts: { ssl?: DatabaseSsl } = {}): Db & { end(): Promise<void>; pool: pg.Pool } {
-  const pool = new pg.Pool({ connectionString: url, ssl: sslOption(opts.ssl ?? 'off') });
+  const mode = opts.ssl ?? 'off';
+  const pool = new pg.Pool({ connectionString: connectionUrl(url, mode), ssl: sslOption(mode) });
   return {
     pool,
     async query<T>(sql: string, params?: unknown[]) {

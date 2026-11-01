@@ -1,4 +1,4 @@
-import { createDb } from '../src/db.js';
+import { connectionUrl, createDb } from '../src/db.js';
 import { getTestDb, resetDb } from './helpers.js';
 
 const db = getTestDb();
@@ -66,5 +66,19 @@ describe('createDb ssl', () => {
     expect(await sslOf('off')).toBeFalsy();
     expect(await sslOf('require')).toEqual({ rejectUnauthorized: false });
     expect(await sslOf('verify')).toBe(true);
+  });
+});
+
+describe('connectionUrl', () => {
+  // pg turns `sslmode=require` in the URL into strict verification, overriding DATABASE_SSL; the Supabase pooler then fails.
+  it('drops sslmode from the URL when DATABASE_SSL manages TLS', () => {
+    const url = 'postgresql://u:p@pooler.example.com:5432/postgres?sslmode=require&application_name=api';
+    expect(connectionUrl(url, 'require')).toBe('postgresql://u:p@pooler.example.com:5432/postgres?application_name=api');
+    expect(connectionUrl('postgresql://u:p@h:5432/db?sslmode=require', 'verify')).toBe('postgresql://u:p@h:5432/db');
+  });
+
+  it('leaves the URL alone when DATABASE_SSL is off', () => {
+    const url = 'postgres://klindom:klindom@postgres:5432/klindom?sslmode=disable';
+    expect(connectionUrl(url, 'off')).toBe(url);
   });
 });

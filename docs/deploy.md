@@ -39,7 +39,7 @@ Generate them once and keep them. Rotating the VAPID keys invalidates every devi
 
    | Variable | Value |
    | --- | --- |
-   | `DATABASE_URL` | the session pooler string from step 1 (no `sslmode` needed; `DATABASE_SSL=require` is preset) |
+   | `DATABASE_URL` | the session pooler string from step 1 (`DATABASE_SSL=require` handles TLS; an `sslmode` in the URL is ignored) |
    | `CRON_SECRET` | a long random string (`openssl rand -hex 32`), reused in step 6 |
    | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | from step 2 |
    | `VAPID_SUBJECT` | `mailto:<owner email>` |
