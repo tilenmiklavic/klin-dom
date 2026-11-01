@@ -373,6 +373,7 @@ render.yaml, docs/deploy.md
   - `apps/app/public/_redirects` (`/* /index.html 200`)
   - `apps/app/public/icons/{icon-192.png,icon-512.png,maskable-512.png,apple-touch-icon.png,badge-72.png}`
   - `apps/app/scripts/render-icons.mjs`
+  - `apps/app/scripts/serve-dist.mjs`
   - `apps/app/web/sw.ts`
   - `apps/app/scripts/build-sw.mjs`
   - `apps/app/src/pwa/register.ts` (no-op) and `apps/app/src/pwa/register.web.ts`
@@ -389,7 +390,7 @@ render.yaml, docs/deploy.md
     - `manifest has name KlinDom, display standalone, theme/background #f2f2f2, start_url /, 192/512/maskable icons that exist on disk`.
     - `index.html links the manifest, apple-touch-icon, theme-color, viewport-fit=cover, apple-mobile-web-app-capable`.
     - `register is a no-op in __DEV__`.
-  - `e2e/pwa.spec.ts`, against `npx serve dist -s` after `export:web`:
+  - `e2e/pwa.spec.ts`, after `export:web`, against `node scripts/serve-dist.mjs`. That script is a ~20-line `node:http` static server with SPA fallback, so no new dependency is needed:
     - `/manifest.webmanifest` is 200.
     - `navigator.serviceWorker.ready` resolves with scope `/`.
     - Offline reload of `/` still renders the welcome text, via `context.setOffline(true)`.
@@ -529,6 +530,7 @@ render.yaml, docs/deploy.md
   - `db.test.ts › createDb passes ssl options to the pool`. Inspect `pool.options.ssl`.
 - [ ] **Step 2:** Run them. Expected: FAIL.
 - [ ] **Step 3: Implement, then write the files.**
+  - Add `wrangler` as an `apps/app` devDependency, using the newest version that passes the release-age policy.
   - **`render.yaml`:** one `web` service with:
     - `runtime: docker`, `dockerfilePath: apps/api/Dockerfile`, `plan: free`, `region: frankfurt`
     - `healthCheckPath: /healthz`
