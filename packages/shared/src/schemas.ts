@@ -67,8 +67,23 @@ export const MemberSettingsInput = z
 
 // Push
 
+/** Push services are public https hosts; refusing IP literals and localhost keeps the jobs off internal hosts. */
+export function isPublicHttpsUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  // WHATWG URL normalises IPv4 spellings (0x7f.1, 2130706433) to dotted quads and keeps IPv6 in brackets.
+  const host = url.hostname.replace(/\.$/, '').toLowerCase();
+  const ipLiteral = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith('[');
+  const local = host === 'localhost' || host.endsWith('.localhost');
+  return url.protocol === 'https:' && !ipLiteral && !local;
+}
+
 export const PushSubscriptionInput = z.object({
-  endpoint: z.string().url(),
+  endpoint: z.string().url().refine(isPublicHttpsUrl, 'Push endpoint must be a public https URL'),
   keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
   userAgent: z.string().max(300).optional(),
 });

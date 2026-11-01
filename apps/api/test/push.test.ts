@@ -67,3 +67,11 @@ it('invalid body → 400', async () => {
   expect((await a.client.post('/push/subscriptions', { endpoint: 'nope', keys: { p256dh: 'x', auth: 'y' } })).status).toBe(400);
   expect((await a.client.post('/push/subscriptions', { endpoint: 'https://x.si/p' })).status).toBe(400);
 });
+
+it('rejects push endpoints that are not public https URLs', async () => {
+  const a = await signIn(app, 'alice');
+  for (const endpoint of ['http://push.example/abc', 'https://127.0.0.1/abc', 'https://[::1]/abc', 'https://localhost/abc', 'https://10.0.0.8:8443/abc']) {
+    expect((await a.client.post('/push/subscriptions', sub(endpoint))).status, endpoint).toBe(400);
+  }
+  expect((await a.client.post('/push/subscriptions', sub('https://fcm.googleapis.com/fcm/send/abc'))).status).toBe(201);
+});

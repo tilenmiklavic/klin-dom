@@ -20,7 +20,10 @@ export interface Notifier {
   send(sub: PushTarget, payload: PushPayload): Promise<SendResult>;
 }
 
-/** Real delivery over Web Push (VAPID). 404/410 mean the subscription is gone; it never throws. */
+/** Sends run one after another under the jobs' advisory lock, so a push service that never answers must not hang them. */
+export const PUSH_SEND_TIMEOUT_MS = 10_000;
+
+/** Real delivery over Web Push (VAPID). 404/410 mean the subscription is gone, a timeout is an error; it never throws. */
 export function webPushNotifier(vapid: { publicKey: string; privateKey: string; subject: string }): Notifier {
   const details = { vapidDetails: { subject: vapid.subject, publicKey: vapid.publicKey, privateKey: vapid.privateKey } };
   return {
@@ -29,7 +32,7 @@ export function webPushNotifier(vapid: { publicKey: string; privateKey: string; 
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           JSON.stringify(payload),
-          { ...details, TTL: 60 * 60 * 12 },
+          { ...details, TTL: 60 * 60 * 12, timeout: PUSH_SEND_TIMEOUT_MS },
         );
         return 'ok';
       } catch (e) {
