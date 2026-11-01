@@ -31,6 +31,7 @@ const historyFor = (month: string) => ({
   awards: [
     { id: 'a1', kind: 'streak_7', userId: null, userName: null, earnedAt: '2026-10-20T08:00:00.000Z' },
     { id: 'a2', kind: 'first_task', userId: 'u2', userName: 'Ana', earnedAt: '2026-10-02T08:00:00.000Z' },
+    { id: 'a3', kind: 'tasks_100', userId: 'u2', userName: 'Ana', earnedAt: '2026-10-14T23:30:00.000Z' },
   ],
 });
 
@@ -111,8 +112,10 @@ describe('awards and history screen', () => {
     expect(screen.getByText('20 Oct')).toBeTruthy();
     expect(screen.getByText('First task done')).toBeTruthy();
     expect(screen.getByText('Ana · 2 Oct')).toBeTruthy();
-    // Four kinds are still unearned.
-    expect(screen.getAllByText('Not yet')).toHaveLength(4);
+    // 23:30Z on the 14th is already the 15th in Ljubljana.
+    expect(screen.getByText('Ana · 15 Oct')).toBeTruthy();
+    // Three kinds are still unearned.
+    expect(screen.getAllByText('Not yet')).toHaveLength(3);
     expect(screen.getByText('30-day streak')).toBeTruthy();
   });
 });

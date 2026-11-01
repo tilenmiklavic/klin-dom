@@ -46,7 +46,7 @@ export default function Awards() {
       {history.isError && !data ? (
         <ErrorCard title={t('awards.loadFailed')} body={t('home.loadFailedBody')} retrying={history.isFetching} onRetry={() => void history.refetch()} />
       ) : null}
-      {data ? <AwardList awards={data.awards} t={t} /> : null}
+      {data ? <AwardList awards={data.awards} timezone={timezone} t={t} /> : null}
     </Screen>
   );
 }
@@ -100,7 +100,7 @@ function Calendar({ month, history, t }: { month: string; history: HistoryDto; t
   );
 }
 
-function AwardList({ awards, t }: { awards: AwardDto[]; t: T }) {
+function AwardList({ awards, timezone, t }: { awards: AwardDto[]; timezone: string | null; t: T }) {
   return (
     <View style={{ gap: tokens.space[3] }}>
       <KText variant="heading" accessibilityRole="header">
@@ -121,7 +121,7 @@ function AwardList({ awards, t }: { awards: AwardDto[]; t: T }) {
           );
         }
         return earned.map((a) => {
-          const when = formatShortDate(a.earnedAt.slice(0, 10));
+          const when = formatShortDate(localDate(new Date(a.earnedAt), timezone ?? 'UTC'));
           return (
             <View key={a.id} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <KText variant="body">{t(awardNameKey(kind))}</KText>
