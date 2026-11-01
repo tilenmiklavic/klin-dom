@@ -1,4 +1,4 @@
-import type { ApiClient } from '@klindom/shared';
+import { ApiError, type ApiClient } from '@klindom/shared';
 import { createPush } from '../src/push/push.web';
 import type { PushEnv } from '../src/push/push';
 
@@ -45,6 +45,8 @@ function fakeEnv(over: { userAgent?: string; permission?: string; requested?: st
   return { env, pushManager, Notification, store };
 }
 
+const Notification_ = (env: PushEnv) => env.Notification as unknown as { requestPermission: jest.Mock };
+
 const fakeApi = () =>
   ({
     pushPublicKey: jest.fn(async () => ({ publicKey: KEY as string | null })),
@@ -55,39 +57,43 @@ const fakeApi = () =>
 describe('push', () => {
   it('no PushManager -> unsupported', async () => {
     const { env } = fakeEnv({ pushManager: false });
-    expect(await createPush(env).state()).toBe('unsupported');
+    expect(await createPush(env).state(fakeApi())).toBe('unsupported');
   });
 
   it('iOS Safari not standalone -> needs-install, and enable never calls requestPermission', async () => {
     const { env, Notification } = fakeEnv({ userAgent: IPHONE, pushManager: false });
     const p = createPush(env);
-    expect(await p.state()).toBe('needs-install');
+    expect(await p.state(fakeApi())).toBe('needs-install');
     expect(await p.enable(fakeApi())).toBe('needs-install');
     expect(Notification.requestPermission).not.toHaveBeenCalled();
   });
 
   it('iOS installed to the Home Screen is not asked to install', async () => {
     const { env } = fakeEnv({ userAgent: IPHONE, standalone: true });
-    expect(await createPush(env).state()).toBe('off');
+    expect(await createPush(env).state(fakeApi())).toBe('off');
   });
 
   it('permission denied -> denied', async () => {
     const { env } = fakeEnv({ permission: 'denied' });
-    expect(await createPush(env).state()).toBe('denied');
+    expect(await createPush(env).state(fakeApi())).toBe('denied');
   });
 
   it('a null server key -> unsupported', async () => {
     const { env } = fakeEnv();
     const api = fakeApi();
     api.pushPublicKey.mockResolvedValue({ publicKey: null });
-    expect(await createPush(env).enable(api)).toBe('unsupported');
+    const p = createPush(env);
+    await p.state(api);
+    await new Promise((r) => setTimeout(r, 0)); // let the key prefetch land
+    expect(await p.enable(api)).toBe('unsupported');
+    expect(Notification_(env).requestPermission).not.toHaveBeenCalled();
   });
 
   it('enable subscribes with the server key and POSTs keys, then the state is on', async () => {
     const { env, pushManager, store } = fakeEnv();
     const api = fakeApi();
     const p = createPush(env);
-    expect(await p.state()).toBe('off');
+    expect(await p.state(api)).toBe('off');
     expect(await p.enable(api)).toBe('on');
     const opts = pushManager.subscribe.mock.calls[0]![0];
     expect(opts.userVisibleOnly).toBe(true);
@@ -98,7 +104,61 @@ describe('push', () => {
       userAgent: CHROME,
     });
     expect(store.get('klindom.pushSubscriptionId')).toBe('sub-1');
-    expect(await p.state()).toBe('on');
+    expect(await p.state(api)).toBe('on');
+  });
+
+  it('enable asks for permission before any pushPublicKey call when the key is not cached yet', async () => {
+    const { env, Notification } = fakeEnv();
+    const api = fakeApi();
+    const order: string[] = [];
+    Notification.requestPermission.mockImplementationOnce(async () => {
+      order.push('requestPermission');
+      Notification.permission = 'granted';
+      return 'granted';
+    });
+    api.pushPublicKey.mockImplementation(async () => {
+      order.push('pushPublicKey');
+      return { publicKey: KEY };
+    });
+    expect(await createPush(env).enable(api)).toBe('on');
+    expect(order).toEqual(['requestPermission', 'pushPublicKey']);
+  });
+
+  it('enable uses the key prefetched by state, so nothing is awaited before requestPermission', async () => {
+    const { env, Notification } = fakeEnv();
+    const api = fakeApi();
+    const p = createPush(env);
+    await p.state(api);
+    await new Promise((r) => setTimeout(r, 0));
+    api.pushPublicKey.mockClear();
+    const pending = p.enable(api);
+    expect(Notification.requestPermission).toHaveBeenCalledTimes(1); // synchronously, inside the tap
+    expect(await pending).toBe('on');
+    expect(api.pushPublicKey).not.toHaveBeenCalled();
+  });
+
+  it('state re-POSTs an existing granted subscription and reports on', async () => {
+    const { env, pushManager, store } = fakeEnv();
+    const first = fakeApi();
+    const p = createPush(env);
+    await p.enable(first); // a previous account enabled it
+    store.delete('klindom.pushSubscriptionId');
+    const second = fakeApi();
+    second.subscribePush.mockResolvedValue({ id: 'sub-2' });
+    expect(await createPush(env).state(second)).toBe('on');
+    expect(second.subscribePush).toHaveBeenCalledWith(expect.objectContaining({ endpoint: 'https://push.example/abc', keys: { p256dh: 'P', auth: 'A' } }));
+    expect(store.get('klindom.pushSubscriptionId')).toBe('sub-2');
+    expect(pushManager.subscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('disable clears the stored id when DELETE returns 404', async () => {
+    const { env, store } = fakeEnv();
+    const api = fakeApi();
+    const p = createPush(env);
+    await p.enable(api);
+    api.unsubscribePush.mockRejectedValue(new ApiError(404, 'not_found', 'nope'));
+    expect(await p.disable(api)).toBe('off');
+    expect(store.has('klindom.pushSubscriptionId')).toBe(false);
   });
 
   it('enable reports denied when the user blocks the prompt', async () => {
@@ -110,7 +170,7 @@ describe('push', () => {
 
   it('granted without a subscription is off', async () => {
     const { env } = fakeEnv({ permission: 'granted', stored: 'sub-1' });
-    expect(await createPush(env).state()).toBe('off');
+    expect(await createPush(env).state(fakeApi())).toBe('off');
   });
 
   it('disable unsubscribes and DELETEs the stored id', async () => {

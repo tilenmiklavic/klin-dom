@@ -12,13 +12,13 @@ export function usePush() {
   useEffect(() => {
     let cancelled = false;
     push
-      .state()
+      .state(api)
       .then((s) => !cancelled && setState(s))
       .catch(() => !cancelled && setState('unsupported'));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [api]);
 
   const run = useCallback(
     async (action: 'enable' | 'disable'): Promise<PushState | null> => {

@@ -34,7 +34,8 @@ export interface PushRegistration {
 }
 
 export interface Push {
-  state(): Promise<PushState>;
+  /** Reads this device's state. When it is already subscribed, re-registers it so it follows the signed-in user. */
+  state(api: ApiClient): Promise<PushState>;
   /** Asks for permission, subscribes, registers the subscription with the API and remembers its id. */
   enable(api: ApiClient): Promise<PushState>;
   /** Unsubscribes this device and removes the subscription from the API. */
@@ -43,7 +44,7 @@ export interface Push {
 
 /** Native builds have no web push. */
 export function createPush(_env: PushEnv): Push {
-  const unsupported = async (): Promise<PushState> => 'unsupported';
+  const unsupported = async (_api?: ApiClient): Promise<PushState> => 'unsupported';
   return { state: unsupported, enable: unsupported, disable: unsupported };
 }
 
