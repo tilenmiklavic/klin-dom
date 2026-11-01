@@ -8,6 +8,7 @@ import { useBootstrap } from '../../../src/data/homes';
 import { useCreateInvite, useInvites } from '../../../src/data/invites';
 import { useStats, type StatsRange } from '../../../src/data/stats';
 import { useCopyInviteLink, useShareInvite } from '../../../src/invite/useShareInvite';
+import { useMemberSettings } from '../../../src/data/notifications';
 import { useCurrentHome } from '../../../src/state/currentHome';
 
 export default function Profile() {
@@ -18,6 +19,7 @@ export default function Profile() {
   const bootstrap = useBootstrap();
   const [range, setRange] = useState<StatsRange>('week');
   const stats = useStats(homeId, range);
+  const memberSettings = useMemberSettings(homeId);
   const invite = useCreateInvite(homeId ?? '');
   const invites = useInvites(homeId);
   const home = bootstrap.data?.homes.find((h) => h.id === homeId);
@@ -126,7 +128,11 @@ export default function Profile() {
       </ListGroup>
 
       <ListGroup title={t('profile.you')}>
-        <ListRow label={t('profile.notifications')} value={t('profile.comingSoon')} />
+        <ListRow
+          label={t('profile.notifications')}
+          value={memberSettings.data ? t(memberSettings.data.notificationsEnabled ? 'notifications.on' : 'notifications.off') : undefined}
+          onPress={() => router.push('/profile/notifications')}
+        />
         <ListRow label={t('profile.account')} onPress={() => router.push('/profile/account')} />
       </ListGroup>
       <Sheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title={t('profile.inviteTitle')} closeLabel={t('common.close')}>

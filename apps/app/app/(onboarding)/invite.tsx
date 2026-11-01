@@ -42,7 +42,7 @@ export default function Invite() {
       )}
       <View style={{ gap: tokens.space[3] }}>
         <Button label={t('invite.share')} disabled={!link} onPress={() => void share()} />
-        <Button variant="chip" label={t('common.continue')} onPress={() => router.replace('/(tabs)')} />
+        <Button variant="chip" label={t('common.continue')} onPress={() => router.replace('/(onboarding)/reminders')} />
       </View>
     </Screen>
   );

@@ -195,7 +195,7 @@ describe('invite step', () => {
     await screen.findByText('k7q2mx');
   }
 
-  it('shares the invite link, then continues to the tabs', async () => {
+  it('shares the invite link, then continues to the reminders step', async () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     await toInvite();
     await press('Share invite');
@@ -203,7 +203,7 @@ describe('invite step', () => {
     expect(share.mock.calls[0]![0]).toMatchObject({ url: 'https://klindom.app/join/k7q2mx' });
     expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
     await press('Continue');
-    await expectPath('/');
+    await expectPath('/reminders');
   });
 
   it('copies the link and says so when sharing is not available', async () => {

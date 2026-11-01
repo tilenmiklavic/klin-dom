@@ -50,7 +50,30 @@
     "title": "Set up your home",
     "hint": "Create a home for your household, or join one you’ve been invited to.",
     "create": "Create a home",
-    "join": "Join a home"
+    "join": "Join a home",
+    "reminders": {
+      "title": "Stay on top of chores",
+      "hint": "Get a nudge when something is due. You can change this any time in Profile.",
+      "turnOn": "Turn on reminders",
+      "notNow": "Not now"
+    }
+  },
+  "notifications": {
+    "reminders": "Reminders",
+    "morningTime": "Morning reminder time",
+    "saveTime": "Save time",
+    "timeInvalid": "Enter a time like 07:30.",
+    "timeSaved": "Reminder time saved",
+    "thisDevice": "This device",
+    "turnOn": "Turn on for this device",
+    "onForDevice": "On for this device",
+    "turnOff": "Turn off",
+    "needsInstall": "Tap Share, then Add to Home Screen, then open KlinDom from your Home Screen.",
+    "denied": "Notifications are blocked for KlinDom. Allow them in your browser or device settings, then come back.",
+    "unsupported": "This browser can’t show notifications.",
+    "deviceFailed": "Couldn’t change that — try again",
+    "on": "On",
+    "off": "Off"
   },
   "tabs": {
     "home": "Home",
@@ -293,7 +316,6 @@
     "you": "You",
     "account": "Account",
     "notifications": "Notifications",
-    "comingSoon": "Coming soon",
     "inviteFailed": "Couldn’t create an invite — try again",
     "loadFailed": "Couldn’t load this — try again",
     "membersTitle": "Members",

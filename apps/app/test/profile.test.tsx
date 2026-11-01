@@ -77,6 +77,7 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
   if (url.endsWith('/homes/h1/invites') && method === 'GET') return json(200, invitesList);
   if (url.endsWith('/homes/h1/invites') && method === 'POST') return createInviteResponse();
   if (/\/invites\/i1$/.test(url) && method === 'DELETE') return new Response(null, { status: 204 });
+  if (url.endsWith('/homes/h1/members/me')) return json(200, { notificationsEnabled: true, defaultReminderTime: '08:00' });
   if (url.includes('/homes/h1/stats')) return json(200, STATS(new URL(url).searchParams.get('range') === 'month' ? 4 : 1));
   if (url.endsWith('/me') && method === 'PATCH') return json(200, { id: 'u1', displayName: 'Til', email: null });
   if (url.endsWith('/me') && method === 'DELETE') return deleteMeResponse();
@@ -124,9 +125,9 @@ describe('profile', () => {
     expect(calls(/\/stats\?.*range=month/)).toHaveLength(1);
   });
 
-  it('lists Notifications as coming soon and navigates to members', async () => {
+  it('shows whether Notifications are on and navigates to members', async () => {
     await renderAt('/profile');
-    await screen.findByText('Coming soon');
+    await screen.findByText('On');
     await press('Members');
     await waitFor(() => expect(app.getPathname()).toBe('/profile/members'));
   });
@@ -159,7 +160,7 @@ describe('invite someone', () => {
     };
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     await renderAt('/profile');
-    await screen.findByText('Coming soon');
+    await screen.findByText('On');
     const row = await screen.findByRole('button', { name: 'Invite someone' });
     await fireEvent.press(row);
     await fireEvent.press(row);

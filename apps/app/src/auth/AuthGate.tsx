@@ -21,8 +21,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const segments = useSegments();
   const group = segments[0];
-  // The invite step comes right after creating a home, so it must stay reachable once homes exist.
-  const inviting = group === '(onboarding)' && (segments as string[])[1] === 'invite';
+  // The invite and reminders steps come right after creating a home, so they must stay reachable once homes exist.
+  const step = (segments as string[])[1];
+  const inviting = group === '(onboarding)' && (step === 'invite' || step === 'reminders');
 
   useEffect(() => {
     if (status === 'signedOut') {
