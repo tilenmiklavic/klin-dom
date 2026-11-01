@@ -104,7 +104,8 @@ export default function Notifications() {
         </>
       ) : null}
 
-      {device.state ? (
+      {/* The other states have nothing to tap; their explanation line below stands alone. */}
+      {device.state === 'off' || device.state === 'on' ? (
         <ListGroup title={t('notifications.thisDevice')}>
           {device.state === 'off' ? (
             <ListRow label={t('notifications.turnOn')} onPress={() => void device.enable()} />

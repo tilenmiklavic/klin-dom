@@ -119,6 +119,7 @@ describe('notifications screen', () => {
     await renderAt('/profile/notifications');
     await screen.findByText('Tap Share, then Add to Home Screen, then open KlinDom from your Home Screen.');
     expect(screen.queryByRole('button', { name: 'Turn on for this device' })).toBeNull();
+    expect(screen.queryByText('This device')).toBeNull();
   });
 
   it('denied shows the blocked hint and no enable button', async () => {
@@ -126,12 +127,19 @@ describe('notifications screen', () => {
     await renderAt('/profile/notifications');
     await screen.findByText('Notifications are blocked for KlinDom. Allow them in your browser or device settings, then come back.');
     expect(screen.queryByRole('button', { name: 'Turn on for this device' })).toBeNull();
+    expect(screen.queryByText('This device')).toBeNull();
   });
 
-  it('unsupported says so', async () => {
+  it('unsupported says so, without an empty device card', async () => {
     mockPush.state.mockResolvedValue('unsupported');
     await renderAt('/profile/notifications');
     await screen.findByText('This browser can’t show notifications.');
+    expect(screen.queryByText('This device')).toBeNull();
+  });
+
+  it('off and on show the device card', async () => {
+    await renderAt('/profile/notifications');
+    await screen.findByText('This device');
   });
 });
 
@@ -169,5 +177,18 @@ describe('onboarding reminders', () => {
     expect(screen.queryByRole('button', { name: 'Turn on reminders' })).toBeNull();
     await press('Continue');
     await expectPath('/');
+  });
+
+  it.each([
+    ['denied', 'Notifications are blocked for KlinDom. Allow them in your browser or device settings, then come back.'],
+    ['unsupported', 'This browser can’t show notifications.'],
+  ])('%s shows the calm line and a Continue chip instead', async (state, line) => {
+    mockPush.state.mockResolvedValue(state);
+    await toReminders();
+    await screen.findByText(line);
+    expect(screen.queryByRole('button', { name: 'Turn on reminders' })).toBeNull();
+    await press('Continue');
+    await expectPath('/');
+    expect(mockPush.enable).not.toHaveBeenCalled();
   });
 });
