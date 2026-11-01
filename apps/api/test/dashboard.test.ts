@@ -69,3 +69,14 @@ it('returns streak: closed past days plus a closed today', async () => {
   await owner.client.post(`/tasks/${windows.id}/complete`, { dueDate: '2026-10-26' });
   expect((await (await owner.client.get(`/homes/${homeId}/dashboard`)).json()).streak).toBe(4);
 });
+
+it('streak is household-wide whatever the scope', async () => {
+  const { owner, homeId, dishes } = await setup();
+  // Owner's own ring closes; the household ring stays open because Ana's task is still due.
+  await owner.client.post(`/tasks/${dishes.id}/complete`, { dueDate: '2026-10-31' });
+  const mine = await (await owner.client.get(`/homes/${homeId}/dashboard?scope=mine`)).json();
+  expect(mine.rings.today).toEqual({ done: 1, total: 1 });
+  const all = await (await owner.client.get(`/homes/${homeId}/dashboard`)).json();
+  expect(all.streak).toBe(0);
+  expect(mine.streak).toBe(all.streak);
+});

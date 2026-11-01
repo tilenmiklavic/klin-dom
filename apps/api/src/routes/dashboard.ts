@@ -38,7 +38,9 @@ export function dashboardRoutes(deps: AppDeps) {
       .filter((row) => scope === 'all' || row.assignee_id === null || row.assignee_id === userId)
       .map((row) => ({ ...toCompletionDto(row, tz), taskName: row.task_name, taskIcon: row.task_icon, roomNames: row.room_names }));
 
-    const streak = await loadStreak(db, homeId, today, rings.today);
+    // The streak is household-wide, so it never follows the request's scope.
+    const householdToday = scope === 'all' ? rings.today : (await loadRings(db, homeId, null, 'all', now)).rings.today;
+    const streak = await loadStreak(db, homeId, today, householdToday);
 
     return c.json({ rings, streak, dueToday, doneToday });
   });
