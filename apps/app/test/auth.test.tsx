@@ -108,9 +108,9 @@ describe('email code sign-in', () => {
     await fireEvent.changeText(await screen.findByLabelText('Email'), 'tilen@example.com');
     await fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
     await waitFor(() => expect(mockAuth.sendEmailCode).toHaveBeenCalledWith('tilen@example.com'));
-    await fireEvent.changeText(await screen.findByLabelText('6-digit code'), '123456');
+    await fireEvent.changeText(await screen.findByLabelText('Code'), '12345678');
     await fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
-    await waitFor(() => expect(mockAuth.verifyEmailCode).toHaveBeenCalledWith('tilen@example.com', '123456'));
+    await waitFor(() => expect(mockAuth.verifyEmailCode).toHaveBeenCalledWith('tilen@example.com', '12345678'));
   }
 
   it('routes to onboarding when the user has no homes', async () => {
@@ -133,9 +133,16 @@ describe('email code sign-in', () => {
     await waitFor(() => expect(mockAuth.sendEmailCode).toHaveBeenCalledWith('tilen@example.com'));
   });
 
-  it('only enables Verify for a full 6-digit code', async () => {
+  it('accepts a 6-digit code too', async () => {
     await renderApp('/code?email=tilen%40example.com');
-    await fireEvent.changeText(await screen.findByLabelText('6-digit code'), '123');
+    await fireEvent.changeText(await screen.findByLabelText('Code'), '123456');
+    await fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
+    await waitFor(() => expect(mockAuth.verifyEmailCode).toHaveBeenCalledWith('tilen@example.com', '123456'));
+  });
+
+  it('only enables Verify once the code has at least 6 digits', async () => {
+    await renderApp('/code?email=tilen%40example.com');
+    await fireEvent.changeText(await screen.findByLabelText('Code'), '12345');
     await fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
     expect(mockAuth.verifyEmailCode).not.toHaveBeenCalled();
   });

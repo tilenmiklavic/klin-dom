@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Button, KText, Screen, TextField, tokens, useToast } from '@klindom/ui';
 import { useAuth } from '../../src/auth/AuthProvider';
 
-const CODE_LENGTH = 6;
+// Supabase's email OTP length is a project setting (6–10, default 8), so accept any of them.
+const MIN_CODE_LENGTH = 6;
+const MAX_CODE_LENGTH = 10;
 
 export default function CodeScreen() {
   const { t } = useTranslation();
@@ -17,8 +19,10 @@ export default function CodeScreen() {
   const [busy, setBusy] = useState(false);
 
   // On success the session changes and the auth gate takes the user onward.
+  const complete = code.length >= MIN_CODE_LENGTH;
+
   const verify = async () => {
-    if (code.length !== CODE_LENGTH) return;
+    if (!complete) return;
     setError(undefined);
     setBusy(true);
     try {
@@ -48,15 +52,15 @@ export default function CodeScreen() {
         <TextField
           label={t('code.label')}
           value={code}
-          onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, CODE_LENGTH))}
+          onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, MAX_CODE_LENGTH))}
           error={error}
           keyboardType="number-pad"
           autoComplete="one-time-code"
           textContentType="oneTimeCode"
-          maxLength={CODE_LENGTH}
+          maxLength={MAX_CODE_LENGTH}
           onSubmitEditing={verify}
         />
-        <Button label={t('code.verify')} loading={busy} disabled={code.length !== CODE_LENGTH} onPress={verify} />
+        <Button label={t('code.verify')} loading={busy} disabled={!complete} onPress={verify} />
         <Button variant="chip" label={t('code.resend')} onPress={resend} />
       </View>
     </Screen>

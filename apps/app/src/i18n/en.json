@@ -10,7 +10,7 @@
   },
   "email": {
     "title": "What’s your email?",
-    "hint": "We’ll send you a 6-digit code. No password needed.",
+    "hint": "We’ll email you a sign-in code. No password needed.",
     "label": "Email",
     "placeholder": "you@example.com",
     "send": "Send code",
@@ -18,8 +18,8 @@
   },
   "code": {
     "title": "Check your inbox",
-    "hint": "Enter the 6-digit code we sent to {{email}}.",
-    "label": "6-digit code",
+    "hint": "Enter the code we sent to {{email}}.",
+    "label": "Code",
     "verify": "Verify",
     "resend": "Send a new code",
     "resent": "New code sent.",
