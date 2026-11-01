@@ -11,6 +11,9 @@ const ConfigSchema = z.object({
   ALLOW_DEV_AUTH: z.enum(['true', 'false']).default('false'),
   APP_URL: z.string().url().default('http://localhost:8081'),
   CRON_SECRET: z.string().optional(),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -24,6 +27,13 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     if (!config.AUTH_DEV_SECRET) throw new Error('AUTH_DEV_SECRET is required when AUTH_MODE=dev');
   } else if (!config.AUTH_JWKS_URL || !config.AUTH_ISSUER) {
     throw new Error('AUTH_JWKS_URL and AUTH_ISSUER are required when AUTH_MODE=jwks');
+  }
+  const vapid = [config.VAPID_PUBLIC_KEY, config.VAPID_PRIVATE_KEY, config.VAPID_SUBJECT];
+  if (vapid.some(Boolean) && !vapid.every(Boolean)) {
+    throw new Error('VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT must be set together');
+  }
+  if (config.VAPID_SUBJECT && !/^(mailto:|https:)/.test(config.VAPID_SUBJECT)) {
+    throw new Error('VAPID_SUBJECT must start with mailto: or https:');
   }
   return config;
 }

@@ -64,6 +64,14 @@ export const MemberSettingsInput = z
   .object({ notificationsEnabled: z.boolean(), defaultReminderTime: TimeOfDay })
   .partial();
 
+// Push
+
+export const PushSubscriptionInput = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
+  userAgent: z.string().max(300).optional(),
+});
+
 // Rooms
 
 export const iconNames = [

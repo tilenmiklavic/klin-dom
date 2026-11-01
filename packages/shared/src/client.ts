@@ -12,6 +12,7 @@ import type {
   MemberDto,
   MemberSettingsDto,
   MemberSettingsInput,
+  PushSubscriptionInput,
   RoomDto,
   StatsDto,
   SuggestionCatalog,
@@ -103,6 +104,10 @@ export function createApiClient(opts: ApiClientOptions) {
     removeMember: (homeId: string, userId: string) => del(`/homes/${homeId}/members/${userId}`),
     leaveHome: (homeId: string) => post<{ homeDeleted: boolean }>(`/homes/${homeId}/leave`),
     transferHome: (homeId: string, userId: string) => post<HomeDto>(`/homes/${homeId}/transfer`, { userId }),
+
+    pushPublicKey: () => get<{ publicKey: string | null }>('/push/public-key'),
+    subscribePush: (input: z.input<typeof PushSubscriptionInput>) => post<{ id: string }>('/push/subscriptions', input),
+    unsubscribePush: (id: string) => del(`/push/subscriptions/${id}`),
 
     createInvite: (homeId: string) => post<InviteDto>(`/homes/${homeId}/invites`),
     listInvites: (homeId: string) => get<InviteDto[]>(`/homes/${homeId}/invites`),
