@@ -1,4 +1,5 @@
 import webpush from 'web-push';
+import type { Config } from '../config.js';
 
 export interface PushPayload {
   title: string;
@@ -35,6 +36,19 @@ export function webPushNotifier(vapid: { publicKey: string; privateKey: string; 
         const status = (e as { statusCode?: number }).statusCode;
         return status === 404 || status === 410 ? 'gone' : 'error';
       }
+    },
+  };
+}
+
+/** Web Push when VAPID is configured; otherwise a notifier that logs and reports every send as failed. */
+export function notifierFromConfig(config: Pick<Config, 'VAPID_PUBLIC_KEY' | 'VAPID_PRIVATE_KEY' | 'VAPID_SUBJECT'>): Notifier {
+  if (config.VAPID_PUBLIC_KEY) {
+    return webPushNotifier({ publicKey: config.VAPID_PUBLIC_KEY, privateKey: config.VAPID_PRIVATE_KEY!, subject: config.VAPID_SUBJECT! });
+  }
+  return {
+    async send(sub) {
+      console.warn(`Push not configured (no VAPID keys); dropping notification for ${sub.endpoint}`);
+      return 'error';
     },
   };
 }

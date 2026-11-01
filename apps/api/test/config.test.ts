@@ -1,4 +1,4 @@
-import { loadConfig } from '../src/config.js';
+import { loadConfig, loadWorkerConfig } from '../src/config.js';
 
 it('treats empty env values as unset', () => {
   const config = loadConfig({ AUTH_MODE: 'dev', AUTH_DEV_SECRET: 's', ALLOW_DEV_AUTH: 'true', AUTH_JWKS_URL: '', AUTH_ISSUER: '' });
@@ -24,5 +24,17 @@ describe('VAPID', () => {
     const keys = { ...base, VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv' };
     expect(() => loadConfig({ ...keys, VAPID_SUBJECT: 'http://x.si' })).toThrow(/VAPID_SUBJECT/);
     expect(loadConfig({ ...keys, VAPID_SUBJECT: 'https://x.si' }).VAPID_SUBJECT).toBe('https://x.si');
+  });
+});
+
+describe('loadWorkerConfig', () => {
+  it('does not require AUTH_* (the worker never verifies tokens)', () => {
+    expect(loadWorkerConfig({ DATABASE_URL: 'postgres://x/y' }).DATABASE_URL).toBe('postgres://x/y');
+    expect(() => loadConfig({ DATABASE_URL: 'postgres://x/y' })).toThrow(/AUTH_JWKS_URL/);
+  });
+
+  it('still validates VAPID', () => {
+    expect(() => loadWorkerConfig({ VAPID_PUBLIC_KEY: 'pub' })).toThrow(/VAPID/);
+    expect(() => loadWorkerConfig({ VAPID_PUBLIC_KEY: 'p', VAPID_PRIVATE_KEY: 'q', VAPID_SUBJECT: 'http://x.si' })).toThrow(/VAPID_SUBJECT/);
   });
 });

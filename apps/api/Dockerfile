@@ -13,6 +13,7 @@ RUN pnpm -F @klindom/api build
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
+# dist holds both entrypoints: server.cjs (default) and worker.cjs (the compose `worker` service).
 COPY --from=build /repo/apps/api/dist ./dist
 USER node
 EXPOSE 8080

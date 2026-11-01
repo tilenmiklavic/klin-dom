@@ -18,9 +18,10 @@ const ConfigSchema = z.object({
 
 export type Config = z.infer<typeof ConfigSchema>;
 
-export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
-  const cleaned = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v !== ''));
-  const config = ConfigSchema.parse(cleaned);
+type Env = Record<string, string | undefined>;
+
+export function loadConfig(env: Env = process.env): Config {
+  const config = loadWorkerConfig(env);
   if (config.AUTH_MODE === 'dev') {
     if (config.NODE_ENV === 'production') throw new Error('AUTH_MODE=dev is not allowed in production');
     if (config.ALLOW_DEV_AUTH !== 'true') throw new Error('AUTH_MODE=dev requires ALLOW_DEV_AUTH=true (local development only)');
@@ -28,6 +29,13 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   } else if (!config.AUTH_JWKS_URL || !config.AUTH_ISSUER) {
     throw new Error('AUTH_JWKS_URL and AUTH_ISSUER are required when AUTH_MODE=jwks');
   }
+  return config;
+}
+
+/** The worker never verifies tokens, so it needs neither AUTH_* nor the API's auth checks. */
+export function loadWorkerConfig(env: Env = process.env): Config {
+  const cleaned = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v !== ''));
+  const config = ConfigSchema.parse(cleaned);
   const vapid = [config.VAPID_PUBLIC_KEY, config.VAPID_PRIVATE_KEY, config.VAPID_SUBJECT];
   if (vapid.some(Boolean) && !vapid.every(Boolean)) {
     throw new Error('VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT must be set together');

@@ -10,6 +10,7 @@ import { completionRoutes } from './routes/completions.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { devRoutes } from './routes/dev.js';
 import { homeRoutes } from './routes/homes.js';
+import { internalRoutes } from './routes/internal.js';
 import { inviteRoutes } from './routes/invites.js';
 import { memberRoutes } from './routes/members.js';
 import { meRoutes } from './routes/me.js';
@@ -49,6 +50,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   );
   app.get('/healthz', (c) => c.json({ ok: true }));
   if (deps.config.AUTH_MODE === 'dev') app.route('/', devRoutes(deps));
+  app.route('/', internalRoutes(deps));
   app.route('/', meRoutes(deps));
   app.route('/', homeRoutes(deps));
   app.route('/', memberRoutes(deps));
