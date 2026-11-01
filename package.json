@@ -15,7 +15,7 @@
     "@types/node": "^22.20.5",
     "dbmate": "^2.37.0",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3",
+    "typescript": "~6.0.3",
     "vitest": "^3.2.7"
   }
 }
