@@ -13,7 +13,13 @@ test('installable shell: manifest, service worker and offline reload', async ({ 
   // Wait until the worker controls the page so the reload below is served by it.
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 
+  // Deep links are navigations the worker answers with the shell (Pages redirects /index.html).
+  await page.goto('/welcome');
+  await expect(page.getByText('Let’s make home shine.')).toBeVisible();
+
   await context.setOffline(true);
   await page.reload();
+  await expect(page.getByText('Let’s make home shine.')).toBeVisible();
+  await page.goto('/welcome');
   await expect(page.getByText('Let’s make home shine.')).toBeVisible();
 });

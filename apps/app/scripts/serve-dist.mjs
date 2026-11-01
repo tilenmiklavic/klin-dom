@@ -1,4 +1,6 @@
 // Tiny static server for dist/ with SPA fallback; used by the PWA e2e (`node scripts/serve-dist.mjs [port]`).
+// Mimics Cloudflare Pages' pretty URLs: /index.html -> 308 /index -> 308 /, so the e2e catches a
+// service worker that hands a redirected response to a navigation.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize } from 'node:path';
@@ -15,6 +17,12 @@ createServer(async (req, res) => {
     res.writeHead(status, { 'content-type': types[extname(file)] ?? 'application/octet-stream' });
     res.end(body);
   };
+  const redirect = { '/index.html': '/index', '/index': '/' }[path];
+  if (redirect) {
+    res.writeHead(308, { location: redirect });
+    res.end();
+    return;
+  }
   try {
     await send(join(dist, path.endsWith('/') ? `${path}index.html` : path));
   } catch {

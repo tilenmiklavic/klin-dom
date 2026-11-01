@@ -2,9 +2,8 @@
 // KlinDom service worker: offline app shell (Workbox precache) and web push notifications.
 // Bundled and manifest-injected into dist/sw.js by scripts/build-sw.mjs.
 import { clientsClaim } from 'workbox-core';
-import { matchPrecache, precacheAndRoute } from 'workbox-precaching';
+import { createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
-import { NetworkFirst } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<string | { url: string; revision: string | null }>;
@@ -15,18 +14,10 @@ clientsClaim();
 
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Deep links (e.g. /welcome) all get the SPA shell: network first, then the cached copy, then the
-// precached one (the runtime cache is empty until the first online navigation has been served).
-const shell = new NetworkFirst({ cacheName: 'app-shell', networkTimeoutSeconds: 3 });
-registerRoute(
-  new NavigationRoute(async ({ event }) => {
-    try {
-      return await shell.handle({ event, request: new Request('/index.html') });
-    } catch {
-      return (await matchPrecache('/index.html')) ?? Response.error();
-    }
-  }),
-);
+// Deep links (e.g. /welcome, /tasks/123) all get the precached SPA shell. Never fetch /index.html at
+// navigation time: Cloudflare Pages redirects it (308 /index, 308 /) and a redirected response is a
+// network error for a navigation. The precached copy is redirect-clean; skipWaiting rolls out deploys.
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')));
 
 interface PushPayload {
   title: string;
@@ -58,10 +49,11 @@ self.addEventListener('notificationclick', (event) => {
       const open = windows[0];
       if (open) {
         await open.focus();
-        await open.navigate(url);
-      } else {
-        await self.clients.openWindow(url);
+        // navigate() rejects for a client this worker doesn't control; open a window instead.
+        const navigated = await open.navigate(url).catch(() => null);
+        if (navigated) return;
       }
+      await self.clients.openWindow(url);
     })(),
   );
 });
