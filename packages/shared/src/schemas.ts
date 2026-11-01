@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { AwardKind } from './awards.js';
 import type { Rings } from './rings.js';
 
 export function isValidTimezone(tz: string): boolean {
@@ -208,6 +209,25 @@ export interface DashboardDto {
   streak: number;
   dueToday: TaskDto[];
   doneToday: (CompletionDto & { taskName: string; taskIcon: IconName; roomNames: string[] })[];
+  /** Awards earned since this member last marked awards as seen. */
+  newAwards: AwardDto[];
+}
+
+export interface AwardDto {
+  id: string;
+  kind: AwardKind;
+  /** Null for household awards. */
+  userId: string | null;
+  /** "Former member" when that person has left; null for household awards. */
+  userName: string | null;
+  earnedAt: string;
+}
+
+export interface HistoryDto {
+  month: string;
+  days: { date: string; done: number; total: number; closed: boolean }[];
+  today: { date: string; done: number; total: number };
+  awards: AwardDto[];
 }
 
 export interface StatsDto {

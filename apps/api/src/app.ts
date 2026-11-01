@@ -6,6 +6,7 @@ import type { Config } from './config.js';
 import type { Db } from './db.js';
 import type { Notifier } from './push/notifier.js';
 import { errorBody, errorHandler } from './errors.js';
+import { awardRoutes } from './routes/awards.js';
 import { completionRoutes } from './routes/completions.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { devRoutes } from './routes/dev.js';
@@ -60,6 +61,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   app.route('/', taskRoutes(deps));
   app.route('/', completionRoutes(deps));
   app.route('/', dashboardRoutes(deps));
+  app.route('/', awardRoutes(deps));
   app.route('/', statsRoutes(deps));
   app.route('/', suggestionRoutes(deps));
   app.notFound((c) => c.json(errorBody('not_found', 'Not found'), 404));

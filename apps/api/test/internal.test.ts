@@ -26,5 +26,5 @@ it('401 on wrong secret', async () => {
 it('200 with summary on right secret', async () => {
   const res = await run(withSecret, 'Bearer cron-secret');
   expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ ran: true, reminders: { sent: 0, failed: 0, gone: 0 }, snapshots: 0 });
+  expect(await res.json()).toEqual({ ran: true, reminders: { sent: 0, failed: 0, gone: 0 }, snapshots: 0, awards: 0 });
 });

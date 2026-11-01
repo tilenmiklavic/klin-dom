@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type {
   BootstrapDto,
+  HistoryDto,
   CompletionDto,
   CompletionResultDto,
   CreateHomeInput,
@@ -137,6 +138,8 @@ export function createApiClient(opts: ApiClientOptions) {
     dashboard: (homeId: string, scope: Scope) => get<DashboardDto>(`/homes/${homeId}/dashboard${qs({ scope })}`),
     stats: (homeId: string, range: 'week' | 'month' | 'custom', from?: string, to?: string) =>
       get<StatsDto>(`/homes/${homeId}/stats${qs({ range, from, to })}`),
+    markAwardsSeen: (homeId: string) => post<void>(`/homes/${homeId}/awards/seen`),
+    history: (homeId: string, month: string) => get<HistoryDto>(`/homes/${homeId}/history${qs({ month })}`),
     suggestions: () => get<z.infer<typeof SuggestionCatalog>>('/suggestions'),
   };
 }

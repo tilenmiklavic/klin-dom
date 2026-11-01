@@ -4,6 +4,7 @@ import { requireMember } from '../access.js';
 import type { AppDeps, AppEnv } from '../app.js';
 import { requireUser } from '../auth/middleware.js';
 import { SELECT_COMPLETIONS, toCompletionDto } from '../repo/completions.js';
+import { listNewAwards } from '../repo/awards.js';
 import { loadRings } from '../repo/dashboard.js';
 import { loadStreak } from '../repo/streak.js';
 import { queryTasks } from '../repo/tasks.js';
@@ -42,7 +43,9 @@ export function dashboardRoutes(deps: AppDeps) {
     const householdToday = scope === 'all' ? rings.today : (await loadRings(db, homeId, null, 'all', now)).rings.today;
     const streak = await loadStreak(db, homeId, today, householdToday);
 
-    return c.json({ rings, streak, dueToday, doneToday });
+    const newAwards = await listNewAwards(db, homeId, userId);
+
+    return c.json({ rings, streak, dueToday, doneToday, newAwards });
   });
 
   return r;

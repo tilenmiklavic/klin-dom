@@ -1,3 +1,4 @@
+export * from './awards.js';
 export * from './dates.js';
 export * from './format.js';
 export * from './reminders.js';
