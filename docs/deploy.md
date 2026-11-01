@@ -12,7 +12,7 @@ Never commit passwords, keys or `.env.production`.
 
 ## 1. Supabase database
 
-1. In the Supabase dashboard open **Connect -> Session pooler** and copy the exact connection string (port 5432, user `postgres.whmcinlyjqavtkfieedc`). Fill in the database password. Do not use the direct host: it is IPv6-only and unreachable from Render.
+1. In the Supabase dashboard open **Connect -> Session pooler** and copy the exact connection string (port 5432, user `postgres.whmcinlyjqavtkfieedc`). Fill in the database password. Do not use the direct host: it is IPv6-only and unreachable from Render. Never use the **transaction** pooler (port 6543): the jobs hold a session-level advisory lock, which only works in session mode.
 2. Run the migrations from your laptop. `--no-deps` stops compose from starting the local Postgres:
 
    ```bash
@@ -29,6 +29,8 @@ pnpm -F @klindom/api exec web-push generate-vapid-keys
 ```
 
 Keep the public and private key for step 3. The subject is `VAPID_SUBJECT=mailto:<owner email>`.
+
+Generate them once and keep them. Rotating the VAPID keys invalidates every device's push subscription: everyone has to turn reminders on again (Profile -> Notifications).
 
 ## 3. Render (API)
 
