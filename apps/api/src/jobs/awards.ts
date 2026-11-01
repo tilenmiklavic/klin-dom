@@ -33,10 +33,16 @@ export async function evaluateAwards(db: Db, homeId: string, now: Date): Promise
   return inserted;
 }
 
-/** Evaluates every home; returns the total number of new awards. */
+/** Evaluates every home; returns the total number of new awards. One failing home is logged and skipped. */
 export async function runAwards(db: Db, now: Date): Promise<number> {
   const homes = await db.query<{ id: string }>('select id from homes');
   let total = 0;
-  for (const home of homes) total += await evaluateAwards(db, home.id, now);
+  for (const home of homes) {
+    try {
+      total += await evaluateAwards(db, home.id, now);
+    } catch (err) {
+      console.error(`awards: home ${home.id} failed`, err);
+    }
+  }
   return total;
 }

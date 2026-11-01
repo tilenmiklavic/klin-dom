@@ -58,3 +58,19 @@ it('runJobs reports the snapshot count', async () => {
   const summary = await runJobs(depsAt('2026-11-01T23:05:00Z'));
   expect(summary.snapshots).toBe(1);
 });
+
+it('one failing home is logged and skipped; the others still get their row', async () => {
+  const good = await setupHome(app, 'Good home');
+  await setCreated(good.homeId, '2026-10-01T00:00:00Z');
+  const bad = await setupHome(app, 'Bad home');
+  await getTestDb().query(`update homes set timezone = 'Mars/Olympus_Mons', created_at = '2026-10-01T00:00:00Z' where id = $1`, [bad.homeId]);
+  const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  try {
+    expect(await runSnapshots(depsAt('2026-11-01T23:05:00Z'))).toBe(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining(bad.homeId), expect.anything());
+  } finally {
+    error.mockRestore();
+  }
+  const homes = await getTestDb().query<{ home_id: string }>('select home_id from daily_rings');
+  expect(homes).toEqual([{ home_id: good.homeId }]);
+});

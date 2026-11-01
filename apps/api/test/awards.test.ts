@@ -1,6 +1,6 @@
 import { createApp } from '../src/app.js';
 import { FixedClock } from '../src/clock.js';
-import { evaluateAwards } from '../src/jobs/awards.js';
+import { evaluateAwards, runAwards } from '../src/jobs/awards.js';
 import { addMember, getTestDb, insertTask, resetDb, setupHome, signIn, testDeps } from './helpers.js';
 
 beforeEach(resetDb);
@@ -111,4 +111,28 @@ it("a removed member's award shows userName \"Former member\"", async () => {
   const res = await owner.client.get(`/homes/${homeId}/history?month=2026-10`);
   const body = (await res.json()) as { awards: Award[] };
   expect(body.awards).toMatchObject([{ kind: 'first_task', userId: ana.id, userName: 'Former member' }]);
+});
+
+it('runAwards logs and skips a failing home; the others are still evaluated', async () => {
+  const good = await setupHome(app, 'Good home');
+  await ageHome(good.homeId, 8);
+  const taskId = await insertTask(good.homeId, good.owner.id);
+  await getTestDb().query(
+    `insert into completions (task_id, home_id, user_id, kind, completed_at, due_date, prev_next_due_date, room_ids, interval_count, interval_unit)
+     values ($1, $2, $3, 'done', '2026-10-30T15:00:00Z', '2026-10-30', '2026-10-30', '{}', 1, 'day')`,
+    [taskId, good.homeId, good.owner.id],
+  );
+  const [bad] = await getTestDb().query<{ id: string }>(
+    `insert into homes (name, timezone, owner_id) values ('Bad home', 'Mars/Olympus_Mons', $1) returning id`,
+    [good.owner.id],
+  );
+  const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  try {
+    expect(await runAwards(getTestDb(), clock.now())).toBeGreaterThan(0);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining(bad!.id), expect.anything());
+  } finally {
+    error.mockRestore();
+  }
+  const homes = await getTestDb().query<{ home_id: string }>('select distinct home_id from awards');
+  expect(homes).toEqual([{ home_id: good.homeId }]);
 });
