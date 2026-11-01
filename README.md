@@ -21,6 +21,12 @@ docker compose -f docker-compose.yml -f compose.dev.yml up --build   # API on :8
 
 Copy `.env.example` to `.env` for local runs. Plain `docker compose up` expects real auth (`AUTH_JWKS_URL`, `AUTH_ISSUER`); dev tokens only work with `compose.dev.yml`.
 
+Push reminders need VAPID keys (all of `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, or none). Generate a pair with `pnpm -F @klindom/api exec web-push generate-vapid-keys`.
+
+## Deploy
+
+See [`docs/deploy.md`](docs/deploy.md) (Supabase + Render + Cloudflare Pages + cron-job.org).
+
 ## Run the app locally
 
 ```bash

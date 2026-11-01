@@ -80,7 +80,7 @@ const rings = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-type Dash = { rings: ReturnType<typeof rings>; dueToday: unknown[]; doneToday: unknown[] };
+type Dash = { rings: ReturnType<typeof rings>; streak: number; dueToday: unknown[]; doneToday: unknown[]; newAwards: unknown[] };
 let dash: Dash;
 let completeGate: Promise<void> | null;
 let completeFails: boolean;
@@ -88,7 +88,7 @@ let dashStatus: number;
 let mineDash: Dash | null;
 let dashHang: boolean;
 let undone: boolean;
-const baseDash = (): Dash => ({ rings: rings(), dueToday: [dishes, vacuum, hob], doneToday: [doneRow] });
+const baseDash = (): Dash => ({ rings: rings(), streak: 0, dueToday: [dishes, vacuum, hob], doneToday: [doneRow], newAwards: [] });
 
 const defaultFetch = async (url: string, init?: RequestInit) => {
   const method = init?.method ?? 'GET';
@@ -115,6 +115,8 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
     const id = complete[1]!;
     const t = (dash.dueToday as { id: string }[]).find((x) => x.id === id)!;
     dash = {
+      streak: dash.streak,
+      newAwards: [],
       rings: rings({ today: { done: dash.rings.today.done + 1, total: dash.rings.today.total }, week: { done: dash.rings.week.done + 1, total: 31 } }),
       dueToday: dash.dueToday.filter((x) => (x as { id: string }).id !== id),
       doneToday: [...dash.doneToday, { ...doneRow, id: 'c1', taskId: id, userId: 'u1', userName: 'Tilen', taskName: (t as unknown as { name: string }).name }],
@@ -223,7 +225,7 @@ describe('home dashboard', () => {
   });
 
   it('keeps a failed undo from resurrecting a row in a cache that never listed it', async () => {
-    mineDash = { rings: rings(), dueToday: [hob], doneToday: [] };
+    mineDash = { rings: rings(), streak: 0, dueToday: [hob], doneToday: [], newAwards: [] };
     await renderApp();
     await screen.findByText('Wash the dishes');
     await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
@@ -264,7 +266,7 @@ describe('home dashboard', () => {
   });
 
   it('celebrates when a tick closes the today ring', async () => {
-    dash = { rings: rings({ today: { done: 8, total: 9 } }), dueToday: [dishes], doneToday: [doneRow] };
+    dash = { rings: rings({ today: { done: 8, total: 9 } }), streak: 0, dueToday: [dishes], doneToday: [doneRow], newAwards: [] };
     await renderApp();
     await screen.findByText('/9');
     expect(screen.queryByText('celebration-visible')).toBeNull();
@@ -275,7 +277,7 @@ describe('home dashboard', () => {
 
   it('does not celebrate a close that the server rejected', async () => {
     completeFails = true;
-    dash = { rings: rings({ today: { done: 8, total: 9 } }), dueToday: [dishes], doneToday: [doneRow] };
+    dash = { rings: rings({ today: { done: 8, total: 9 } }), streak: 0, dueToday: [dishes], doneToday: [doneRow], newAwards: [] };
     await renderApp();
     await screen.findByText('/9');
     await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes done' }));
@@ -286,7 +288,7 @@ describe('home dashboard', () => {
 
   it('restores a failed tick at its original index in all, and leaves mine without it', async () => {
     completeFails = true;
-    mineDash = { rings: rings(), dueToday: [dishes, hob], doneToday: [doneRow] };
+    mineDash = { rings: rings(), streak: 0, dueToday: [dishes, hob], doneToday: [doneRow], newAwards: [] };
     await renderApp();
     await screen.findByText('Vacuum the floors');
     await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
@@ -331,7 +333,7 @@ describe('home dashboard', () => {
   });
 
   it('shows an empty state when nothing is due', async () => {
-    dash = { rings: rings({ today: { done: 0, total: 0 } }), dueToday: [], doneToday: [] };
+    dash = { rings: rings({ today: { done: 0, total: 0 } }), streak: 0, dueToday: [], doneToday: [], newAwards: [] };
     await renderApp();
     expect(await screen.findByText('Nothing due today')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add a task' })).toBeTruthy();
@@ -344,5 +346,35 @@ describe('home dashboard', () => {
     for (const label of ['Home', 'Rooms', 'Tasks', 'Profile']) expect(screen.getByRole('tab', { name: label })).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'See all' }));
     await waitFor(() => expect(app.getPathname()).toBe('/tasks'));
+  });
+});
+
+describe('streak and awards', () => {
+  it.each([
+    [6, '6-day streak'],
+    [1, '1-day streak'],
+  ])('shows streak %i in the subline', async (streak, text) => {
+    dash = { ...baseDash(), streak };
+    await renderApp();
+    expect(await screen.findByText(text)).toBeTruthy();
+  });
+
+  it('shows no streak line at 0', async () => {
+    await renderApp();
+    await screen.findByText('Saturday, 31 October');
+    expect(screen.queryByText(/-day streak/)).toBeNull();
+  });
+
+  it('celebrates a new award with a toast, marks it seen once, and not again on refetch', async () => {
+    dash = { ...baseDash(), newAwards: [{ id: 'a1', kind: 'streak_7', userId: null, userName: null, earnedAt: '2026-10-31T08:00:00.000Z' }] };
+    await renderApp();
+    expect(await screen.findByText('celebration-visible')).toBeTruthy();
+    expect(await screen.findByText('New award: 7-day streak')).toBeTruthy();
+    await waitFor(() => expect(calls(/\/homes\/h1\/awards\/seen$/, 'POST')).toHaveLength(1));
+    // The server may still list it on the next poll (e.g. a slow write); it must not fire again.
+    await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'All' }));
+    await act(async () => {});
+    expect(calls(/\/awards\/seen$/, 'POST')).toHaveLength(1);
   });
 });
