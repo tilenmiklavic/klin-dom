@@ -1,5 +1,5 @@
 import { createApp } from '../src/app.js';
-import { addMember, resetDb, setupHomeWithRooms, signIn, testDeps } from './helpers.js';
+import { addMember, getTestDb, resetDb, setupHomeWithRooms, signIn, testDeps } from './helpers.js';
 
 beforeEach(resetDb);
 
@@ -55,4 +55,17 @@ it('hides the dashboard from non-members', async () => {
   const { homeId } = await setup();
   const stranger = await signIn(app, 'stranger');
   expect((await stranger.client.get(`/homes/${homeId}/dashboard`)).status).toBe(404);
+});
+
+it('returns streak: closed past days plus a closed today', async () => {
+  const { owner, homeId, dishes, windows } = await setup();
+  await getTestDb().query(
+    `insert into daily_rings (home_id, date, today_done, today_total, closed, week_done, week_total, fresh_pct)
+     select $1, d::date, 2, 2, true, 2, 5, 100 from unnest($2::text[]) d`,
+    [homeId, ['2026-10-30', '2026-10-29', '2026-10-28']],
+  );
+  expect((await (await owner.client.get(`/homes/${homeId}/dashboard`)).json()).streak).toBe(3);
+  await owner.client.post(`/tasks/${dishes.id}/complete`, { dueDate: '2026-10-31' });
+  await owner.client.post(`/tasks/${windows.id}/complete`, { dueDate: '2026-10-26' });
+  expect((await (await owner.client.get(`/homes/${homeId}/dashboard`)).json()).streak).toBe(4);
 });

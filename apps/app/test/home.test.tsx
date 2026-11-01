@@ -80,7 +80,7 @@ const rings = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-type Dash = { rings: ReturnType<typeof rings>; dueToday: unknown[]; doneToday: unknown[] };
+type Dash = { rings: ReturnType<typeof rings>; streak: number; dueToday: unknown[]; doneToday: unknown[] };
 let dash: Dash;
 let completeGate: Promise<void> | null;
 let completeFails: boolean;
@@ -88,7 +88,7 @@ let dashStatus: number;
 let mineDash: Dash | null;
 let dashHang: boolean;
 let undone: boolean;
-const baseDash = (): Dash => ({ rings: rings(), dueToday: [dishes, vacuum, hob], doneToday: [doneRow] });
+const baseDash = (): Dash => ({ rings: rings(), streak: 0, dueToday: [dishes, vacuum, hob], doneToday: [doneRow] });
 
 const defaultFetch = async (url: string, init?: RequestInit) => {
   const method = init?.method ?? 'GET';
@@ -115,6 +115,7 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
     const id = complete[1]!;
     const t = (dash.dueToday as { id: string }[]).find((x) => x.id === id)!;
     dash = {
+      streak: dash.streak,
       rings: rings({ today: { done: dash.rings.today.done + 1, total: dash.rings.today.total }, week: { done: dash.rings.week.done + 1, total: 31 } }),
       dueToday: dash.dueToday.filter((x) => (x as { id: string }).id !== id),
       doneToday: [...dash.doneToday, { ...doneRow, id: 'c1', taskId: id, userId: 'u1', userName: 'Tilen', taskName: (t as unknown as { name: string }).name }],
@@ -223,7 +224,7 @@ describe('home dashboard', () => {
   });
 
   it('keeps a failed undo from resurrecting a row in a cache that never listed it', async () => {
-    mineDash = { rings: rings(), dueToday: [hob], doneToday: [] };
+    mineDash = { rings: rings(), streak: 0, dueToday: [hob], doneToday: [] };
     await renderApp();
     await screen.findByText('Wash the dishes');
     await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
@@ -264,7 +265,7 @@ describe('home dashboard', () => {
   });
 
   it('celebrates when a tick closes the today ring', async () => {
-    dash = { rings: rings({ today: { done: 8, total: 9 } }), dueToday: [dishes], doneToday: [doneRow] };
+    dash = { rings: rings({ today: { done: 8, total: 9 } }), streak: 0, dueToday: [dishes], doneToday: [doneRow] };
     await renderApp();
     await screen.findByText('/9');
     expect(screen.queryByText('celebration-visible')).toBeNull();
@@ -275,7 +276,7 @@ describe('home dashboard', () => {
 
   it('does not celebrate a close that the server rejected', async () => {
     completeFails = true;
-    dash = { rings: rings({ today: { done: 8, total: 9 } }), dueToday: [dishes], doneToday: [doneRow] };
+    dash = { rings: rings({ today: { done: 8, total: 9 } }), streak: 0, dueToday: [dishes], doneToday: [doneRow] };
     await renderApp();
     await screen.findByText('/9');
     await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes done' }));
@@ -286,7 +287,7 @@ describe('home dashboard', () => {
 
   it('restores a failed tick at its original index in all, and leaves mine without it', async () => {
     completeFails = true;
-    mineDash = { rings: rings(), dueToday: [dishes, hob], doneToday: [doneRow] };
+    mineDash = { rings: rings(), streak: 0, dueToday: [dishes, hob], doneToday: [doneRow] };
     await renderApp();
     await screen.findByText('Vacuum the floors');
     await fireEvent.press(screen.getByRole('tab', { name: 'Mine' }));
@@ -331,7 +332,7 @@ describe('home dashboard', () => {
   });
 
   it('shows an empty state when nothing is due', async () => {
-    dash = { rings: rings({ today: { done: 0, total: 0 } }), dueToday: [], doneToday: [] };
+    dash = { rings: rings({ today: { done: 0, total: 0 } }), streak: 0, dueToday: [], doneToday: [] };
     await renderApp();
     expect(await screen.findByText('Nothing due today')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add a task' })).toBeTruthy();

@@ -5,6 +5,7 @@ import type { AppDeps, AppEnv } from '../app.js';
 import { requireUser } from '../auth/middleware.js';
 import { SELECT_COMPLETIONS, toCompletionDto } from '../repo/completions.js';
 import { loadRings } from '../repo/dashboard.js';
+import { loadStreak } from '../repo/streak.js';
 import { queryTasks } from '../repo/tasks.js';
 
 export function dashboardRoutes(deps: AppDeps) {
@@ -37,7 +38,9 @@ export function dashboardRoutes(deps: AppDeps) {
       .filter((row) => scope === 'all' || row.assignee_id === null || row.assignee_id === userId)
       .map((row) => ({ ...toCompletionDto(row, tz), taskName: row.task_name, taskIcon: row.task_icon, roomNames: row.room_names }));
 
-    return c.json({ rings, dueToday, doneToday });
+    const streak = await loadStreak(db, homeId, today, rings.today);
+
+    return c.json({ rings, streak, dueToday, doneToday });
   });
 
   return r;

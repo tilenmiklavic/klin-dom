@@ -204,6 +204,8 @@ export interface UndoResultDto {
 
 export interface DashboardDto {
   rings: Rings;
+  /** Consecutive days the household closed its today ring. */
+  streak: number;
   dueToday: TaskDto[];
   doneToday: (CompletionDto & { taskName: string; taskIcon: IconName; roomNames: string[] })[];
 }

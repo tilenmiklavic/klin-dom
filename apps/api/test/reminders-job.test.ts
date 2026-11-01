@@ -137,7 +137,7 @@ it('runJobs returns ran: false while another runner holds the lock', async () =>
     return runJobs(deps);
   });
   expect(inner).toEqual({ ran: false });
-  expect(await runJobs(deps)).toEqual({ ran: true, reminders: { sent: 0, failed: 0, gone: 0 } });
+  expect(await runJobs(deps)).toEqual({ ran: true, reminders: { sent: 0, failed: 0, gone: 0 }, snapshots: 0 });
 });
 
 it('5-day-overdue task on first run → nothing sent', async () => {

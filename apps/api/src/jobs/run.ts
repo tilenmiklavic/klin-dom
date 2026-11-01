@@ -1,3 +1,4 @@
+import { runSnapshots } from './snapshots.js';
 import { runReminders, type JobDeps, type ReminderSummary } from './reminders.js';
 
 export type { JobDeps } from './reminders.js';
@@ -11,7 +12,8 @@ export type JobsSummary = { ran: boolean; reminders?: ReminderSummary; snapshots
 export async function runJobs(deps: JobDeps): Promise<JobsSummary> {
   const result = await deps.db.withAdvisoryLock(JOBS_LOCK_KEY, async () => {
     const reminders = await runReminders(deps);
-    return { reminders };
+    const snapshots = await runSnapshots(deps);
+    return { reminders, snapshots };
   });
   return result ? { ran: true, ...result } : { ran: false };
 }
