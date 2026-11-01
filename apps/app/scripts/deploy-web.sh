@@ -10,4 +10,4 @@ if [ ! -f apps/app/.env.production ]; then
 fi
 
 pnpm -F @klindom/app export:web
-pnpm -F @klindom/app exec wrangler pages deploy dist --project-name klindom
+pnpm -F @klindom/app exec wrangler pages deploy dist --project-name klindom --branch "${PAGES_BRANCH:-main}"

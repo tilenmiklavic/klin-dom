@@ -58,7 +58,9 @@ Keep the public and private key for step 3. The subject is `VAPID_SUBJECT=mailto
    pnpm deploy:web
    ```
 
-   It fails early if `.env.production` is missing, builds with `expo export` (which loads `.env.production`) and runs `wrangler pages deploy dist --project-name klindom`.
+   It fails early if `.env.production` is missing, builds with `expo export` (which loads `.env.production`) and runs `wrangler pages deploy dist --project-name klindom --branch main`.
+
+   Deploys go to production (branch `main`) by default, so `klindom.pages.dev` serves them. `PAGES_BRANCH=<name> pnpm deploy:web` makes a preview deployment instead.
 4. Set `APP_URL` on Render to the resulting Pages URL if it was a placeholder.
 
 ## 5. Supabase Auth
