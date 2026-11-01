@@ -23,6 +23,9 @@ jest.mock('../src/auth/supabase', () => ({
 }));
 
 const mockSupabaseSignOut = jest.fn(async () => {});
+// Signing out (or deleting the account) unsubscribes this device first.
+const mockPush = { state: jest.fn(async () => 'off'), enable: jest.fn(async () => 'on'), disable: jest.fn(async () => 'off') };
+jest.mock('../src/push/push', () => ({ push: mockPush }));
 let mockClient: import('@tanstack/react-query').QueryClient;
 jest.mock('../src/data/queryClient', () => {
   const actual = jest.requireActual('../src/data/queryClient');
@@ -307,7 +310,16 @@ describe('account', () => {
     expect(body(calls(/\/me$/, 'PATCH')[0]!)).toEqual({ displayName: 'Til' });
   });
 
-  it('signs out', async () => {
+  it('signs out, unsubscribing this device from reminders first', async () => {
+    await renderAt('/profile/account');
+    await press('Sign out');
+    await waitFor(() => expect(mockSupabaseSignOut).toHaveBeenCalled());
+    expect(mockPush.disable).toHaveBeenCalledTimes(1);
+    expect(mockPush.disable.mock.invocationCallOrder[0]!).toBeLessThan(mockSupabaseSignOut.mock.invocationCallOrder[0]!);
+  });
+
+  it('still signs out when unsubscribing fails', async () => {
+    mockPush.disable.mockRejectedValueOnce(new Error('offline'));
     await renderAt('/profile/account');
     await press('Sign out');
     await waitFor(() => expect(mockSupabaseSignOut).toHaveBeenCalled());
@@ -368,11 +380,21 @@ describe('account', () => {
     expect(mockSupabaseSignOut).not.toHaveBeenCalled();
   });
 
-  it('signs out after the account is deleted', async () => {
+  it('signs out after the account is deleted, unsubscribing this device before the delete', async () => {
+    const order: string[] = [];
+    mockPush.disable.mockImplementationOnce(async () => {
+      order.push('disable');
+      return 'off';
+    });
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/me') && init?.method === 'DELETE') order.push('delete');
+      return defaultFetch(url, init);
+    });
     await renderAt('/profile/account');
     await press('Delete account');
     await inSheet('Delete account');
     await waitFor(() => expect(calls(/\/me$/, 'DELETE')).toHaveLength(1));
     await waitFor(() => expect(mockSupabaseSignOut).toHaveBeenCalled());
+    expect(order).toEqual(['disable', 'delete']);
   });
 });

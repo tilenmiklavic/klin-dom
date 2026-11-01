@@ -7,6 +7,7 @@ import { Button, KText, ListGroup, ListRow, Screen, Sheet, TextField, tokens, us
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { apiErrorText } from '../../../src/errors/apiErrorText';
 import { useBootstrap, useDeleteMe, useUpdateMe } from '../../../src/data/homes';
+import { useForgetDevicePush, useSignOut } from '../../../src/push/usePush';
 
 export default function Account() {
   const { t } = useTranslation();
@@ -14,6 +15,8 @@ export default function Account() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const { signOut } = useAuth();
+  const signOutDevice = useSignOut();
+  const forgetDevicePush = useForgetDevicePush();
   const current = useBootstrap().data?.user.displayName ?? '';
   const update = useUpdateMe();
   const del = useDeleteMe();
@@ -53,6 +56,8 @@ export default function Account() {
     onlineManager.setOnline(false);
     try {
       await queryClient.cancelQueries();
+      // Before the delete: afterwards the API must not be called with this token again.
+      await forgetDevicePush();
       await del.mutateAsync();
       // Signing out clears the session, the cached data and the chosen home; the auth gate shows Welcome.
       await signOut();
@@ -88,7 +93,7 @@ export default function Account() {
         />
       </View>
       <ListGroup>
-        <ListRow label={t('profile.signOut')} onPress={() => void signOut()} />
+        <ListRow label={t('profile.signOut')} onPress={() => void signOutDevice()} />
         <ListRow label={t('profile.deleteAccount')} destructive onPress={() => setConfirming(true)} />
       </ListGroup>
 

@@ -8,6 +8,7 @@ import { useBootstrap } from '../data/useBootstrap';
 import { useAuth } from './AuthProvider';
 import { currentHomeStore } from '../state/currentHome';
 import { pendingInvite } from './pendingInvite';
+import { useSignOut } from '../push/usePush';
 
 /**
  * Routes by session state: signed out -> Welcome; signed in without homes -> onboarding; otherwise the tabs.
@@ -15,7 +16,8 @@ import { pendingInvite } from './pendingInvite';
  */
 export function AuthGate({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
-  const { status, signOut } = useAuth();
+  const { status } = useAuth();
+  const signOut = useSignOut();
   const bootstrap = useBootstrap();
   const router = useRouter();
   const queryClient = useQueryClient();
