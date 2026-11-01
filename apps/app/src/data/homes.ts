@@ -123,5 +123,6 @@ export function useUpdateMe() {
 
 export function useDeleteMe() {
   const api = useApi();
-  return useMutation({ mutationFn: () => api.deleteMe() });
+  // Paused queries must not pause this request, so it ignores the online state.
+  return useMutation({ mutationFn: () => api.deleteMe(), networkMode: 'always' });
 }

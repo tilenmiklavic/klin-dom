@@ -10,7 +10,7 @@
   },
   "email": {
     "title": "What’s your email?",
-    "hint": "We’ll send you a 6-digit code. No password needed.",
+    "hint": "We’ll email you a sign-in code. No password needed.",
     "label": "Email",
     "placeholder": "you@example.com",
     "send": "Send code",
@@ -18,8 +18,8 @@
   },
   "code": {
     "title": "Check your inbox",
-    "hint": "Enter the 6-digit code we sent to {{email}}.",
-    "label": "6-digit code",
+    "hint": "Enter the code we sent to {{email}}.",
+    "label": "Code",
     "verify": "Verify",
     "resend": "Send a new code",
     "resent": "New code sent.",
@@ -34,7 +34,17 @@
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "tickFailed": "Couldn’t save that — try again",
-    "saveFailed": "Couldn’t save that — try again"
+    "saveFailed": "Couldn’t save that — try again",
+    "network": "Couldn’t reach KlinDom. Check your connection and try again.",
+    "notFound": "Couldn’t find that. It may have been removed.",
+    "inviteInvalid": "This invite is no longer valid",
+    "roomHasTasks": "Move or archive its tasks first",
+    "transferRequired": "Hand the home over to someone before leaving",
+    "confirmMismatch": "That name doesn’t match. Check it and try again.",
+    "invalidInput": "Check what you entered and try again.",
+    "forbidden": "Only the owner can do that.",
+    "cannotRemoveSelf": "You can leave the home from Home settings.",
+    "notLatest": "That changed in the meantime. Refresh and try again."
   },
   "onboarding": {
     "title": "Set up your home",
@@ -86,7 +96,9 @@
     "title": "Review Tasks",
     "hint": "Untick anything you don’t want. You can add more later.",
     "shared": "Shared Tasks",
-    "create": "Create home"
+    "create": "Create home",
+    "loadFailed": "Couldn’t load suggestions",
+    "loadFailedBody": "Check your connection and try again."
   },
   "invite": {
     "title": "Invite Your Household",
@@ -96,13 +108,15 @@
     "copied": "Invite link copied",
     "message": "Join {{home}} on KlinDom.",
     "failed": "Couldn’t create an invite link.",
-    "messageWithLink": "Join {{home}} on KlinDom: {{url}}"
+    "messageWithLink": "Join {{home}} on KlinDom: {{url}}",
+    "copy": "Copy link"
   },
   "common": {
     "back": "Back",
     "continue": "Continue",
     "close": "Close",
-    "retry": "Try again"
+    "retry": "Try again",
+    "loading": "Loading…"
   },
   "home": {
     "greetingFresh": "Fresh start today!",
@@ -224,7 +238,8 @@
     "skipped": "skipped",
     "entry": "{{name}} · {{date}} · {{status}}",
     "edit": "Edit task",
-    "unknownMember": "Someone"
+    "unknownMember": "Someone",
+    "notFound": "Couldn’t find this task"
   },
   "roomsTab": {
     "summary_one": "{{count}} room · {{fresh}} fresh",
@@ -303,7 +318,6 @@
     "leave": "Leave home",
     "leaveTitle": "Leave {{home}}?",
     "leaveBody": "You’ll lose access to its rooms and tasks until someone invites you back.",
-    "transferRequired": "Hand the home over to someone before leaving",
     "left": "You left {{home}}",
     "homeDeleted": "{{home}} deleted",
     "deleteHome": "Delete home",
@@ -316,6 +330,7 @@
     "signOut": "Sign out",
     "deleteAccount": "Delete account",
     "deleteAccountTitle": "Delete your account?",
-    "deleteAccountBody": "This permanently removes your account. Homes you share with others stay with them."
+    "deleteAccountBody": "This permanently removes your account. Homes you share with others stay with them.",
+    "inviteTitle": "Invite Someone"
   }
 }

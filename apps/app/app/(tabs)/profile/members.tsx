@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ApiError, type MemberDto } from '@klindom/shared';
+import type { MemberDto } from '@klindom/shared';
 import { Avatar, Button, KText, ListGroup, ListRow, Screen, Sheet, tokens, useToast } from '@klindom/ui';
+import { apiErrorText } from '../../../src/errors/apiErrorText';
 import { useBootstrap, useHome, useMembers, useRemoveMember, useTransferHome } from '../../../src/data/homes';
 import { useInvites, useRevokeInvite } from '../../../src/data/invites';
 import { useCurrentHome } from '../../../src/state/currentHome';
@@ -26,7 +27,7 @@ export default function Members() {
   const isOwner = home.data?.role === 'owner';
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/profile'));
-  const errorText = (e: unknown) => (e instanceof ApiError && e.status === 409 ? e.message : t('errors.saveFailed'));
+  const errorText = (e: unknown) => apiErrorText(t, e, { fallback: 'errors.saveFailed' });
 
   const confirm = async () => {
     if (!pending) return;

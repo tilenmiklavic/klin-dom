@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { localDate, type TaskDto } from '@klindom/shared';
-import { ActionOrb, Button, EmptyState, KText, Screen, SegmentedControl, Sheet, tokens, useToast } from '@klindom/ui';
+import { ActionOrb, Button, EmptyState, Screen, SegmentedControl, Sheet, useToast } from '@klindom/ui';
+import { ErrorCard } from '../../../src/components/ErrorCard';
 import { TaskSections } from '../../../src/components/tasks/TaskSections';
 import { useHome, useMembers } from '../../../src/data/homes';
 import { useRooms } from '../../../src/data/rooms';
@@ -86,13 +86,7 @@ export default function Tasks() {
           onSkip={setSkipping}
         />
       ) : tasks.isError ? (
-        <View style={{ alignItems: 'center', gap: tokens.space[3], padding: tokens.space[6], borderRadius: tokens.radius.lg, backgroundColor: tokens.color.surfaceRaised }}>
-          <KText variant="heading">{t('tasks.loadFailed')}</KText>
-          <KText variant="body" color="inkMuted" style={{ textAlign: 'center' }}>
-            {t('tasks.loadFailedBody')}
-          </KText>
-          <Button label={t('common.retry')} loading={tasks.isFetching} onPress={() => void tasks.refetch()} />
-        </View>
+        <ErrorCard title={t('tasks.loadFailed')} body={t('tasks.loadFailedBody')} retrying={tasks.isFetching} onRetry={() => void tasks.refetch()} />
       ) : null}
       <Sheet visible={skipping !== null} onClose={() => setSkipping(null)} title={skipping?.name ?? ''} closeLabel={t('common.close')}>
         <Button variant="secondary" label={t('home.skip')} onPress={() => void onSkip()} />

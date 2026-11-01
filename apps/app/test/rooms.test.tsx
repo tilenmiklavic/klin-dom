@@ -60,6 +60,8 @@ const emptyRings = { today: { done: 0, total: 0 }, week: { done: 0, total: 0 }, 
 
 let rooms: ReturnType<typeof room>[];
 let archiveResponse: () => Response;
+let roomsStatus = 200;
+let roomTasksStatus = 200;
 
 const defaultFetch = async (url: string, init?: RequestInit) => {
   const method = init?.method ?? 'GET';
@@ -68,13 +70,16 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
   }
   if (url.endsWith('/homes/h1')) return json(200, { id: 'h1', name: 'Maple', timezone: 'Europe/Ljubljana', ownerId: 'u1', role: 'owner' });
   if (url.endsWith('/homes/h1/members')) return json(200, [{ userId: 'u1', displayName: 'Tilen', avatarUrl: null, role: 'owner', joinedAt: '' }]);
-  if (url.endsWith('/homes/h1/rooms') && method === 'GET') return json(200, rooms);
+  if (url.endsWith('/homes/h1/rooms') && method === 'GET') {
+    return roomsStatus === 200 ? json(200, rooms) : json(roomsStatus, { error: { code: 'forbidden', message: 'x' } });
+  }
   if (url.endsWith('/homes/h1/rooms') && method === 'POST') return json(201, room('r9', JSON.parse(init!.body as string).name, 9));
   if (url.endsWith('/homes/h1/rooms/order') && method === 'POST') return json(200, rooms);
   if (/\/rooms\/r1$/.test(url) && method === 'PATCH') return json(200, rooms[0]);
   if (/\/rooms\/r1$/.test(url) && method === 'DELETE') return archiveResponse();
   if (url.includes('/homes/h1/dashboard')) return json(200, { rings: emptyRings, dueToday: [], doneToday: [] });
   if (url.includes('/homes/h1/tasks') && method === 'GET') {
+    if (roomTasksStatus !== 200) return json(roomTasksStatus, { error: { code: 'forbidden', message: 'x' } });
     const roomId = new URL(url).searchParams.get('roomId');
     return json(200, roomId ? TASKS.filter((t) => t.rooms.some((r) => r.id === roomId)) : TASKS);
   }
@@ -107,6 +112,8 @@ beforeEach(async () => {
   jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-31T10:00:00Z'));
   rooms = [room('r1', 'Kitchen', 0), room('r2', 'Bedroom', 1), room('r3', 'Bathroom', 2), room('r4', 'Hall', 3)];
   archiveResponse = () => new Response(null, { status: 204 });
+  roomsStatus = 200;
+  roomTasksStatus = 200;
   fetchMock.mockImplementation(defaultFetch);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
@@ -181,6 +188,31 @@ describe('room detail', () => {
     await fireEvent.press(await screen.findByRole('checkbox', { name: 'Mark Wash the dishes done' }));
     await waitFor(() => expect(calls(/\/tasks\/t1\/complete$/, 'POST')).toHaveLength(1));
     expect(body(calls(/\/tasks\/t1\/complete$/, 'POST')[0]!)).toEqual({ dueDate: '2026-10-26' });
+  });
+
+  it('shows a retryable error when the rooms fail to load, not a dead end or "not found"', async () => {
+    roomsStatus = 403;
+    await renderAt('/rooms/r1');
+    expect(await screen.findByText('Couldn’t load rooms')).toBeTruthy();
+    expect(screen.queryByText('Couldn’t find this room')).toBeNull();
+    roomsStatus = 200;
+    await press('Try again');
+    expect(await screen.findByText('Wash the dishes')).toBeTruthy();
+  });
+
+  it('says a room is not found only once the rooms have loaded without it', async () => {
+    await renderAt('/rooms/nope');
+    expect(await screen.findByText('Couldn’t find this room')).toBeTruthy();
+    expect(screen.queryByText('Try again')).toBeNull();
+  });
+
+  it('shows a retryable error when the room tasks fail to load', async () => {
+    roomTasksStatus = 403;
+    await renderAt('/rooms/r1');
+    expect(await screen.findByText('Couldn’t load tasks')).toBeTruthy();
+    roomTasksStatus = 200;
+    await press('Try again');
+    expect(await screen.findByText('Wash the dishes')).toBeTruthy();
   });
 
   it('archive that hits room_has_tasks shows the API message as a toast', async () => {

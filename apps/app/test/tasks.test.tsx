@@ -60,6 +60,7 @@ const emptyRings = { today: { done: 0, total: 0 }, week: { done: 0, total: 0 }, 
 
 let tasks: unknown[];
 let detail: Record<string, unknown>;
+let detailStatus = 200;
 const history = [
   { id: 'c1', taskId: 't1', kind: 'done', userId: 'u2', userName: 'Ana', completedAt: '2026-10-30T10:00:00Z', dueDate: '2026-10-26', onTime: false },
   { id: 'c2', taskId: 't1', kind: 'skip', userId: 'u1', userName: 'Tilen', completedAt: '2026-10-20T10:00:00Z', dueDate: '2026-10-19', onTime: true },
@@ -87,7 +88,9 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
     detail = { ...detail, mutedByMe: JSON.parse(init!.body as string).muted };
     return json(200, detail);
   }
-  if (url.endsWith('/tasks/t1') && method === 'GET') return json(200, detail);
+  if (url.endsWith('/tasks/t1') && method === 'GET') {
+    return detailStatus === 200 ? json(200, detail) : json(detailStatus, { error: { code: detailStatus === 404 ? 'not_found' : 'forbidden', message: 'x' } });
+  }
   if (url.endsWith('/tasks/t1') && method === 'PATCH') return json(200, detail);
   if (url.endsWith('/tasks/t1') && method === 'DELETE') return new Response(null, { status: 204 });
   return json(404, { error: { code: 'not_found', message: 'nope' } });
@@ -112,6 +115,7 @@ beforeEach(async () => {
   jest.clearAllMocks();
   jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-31T10:00:00Z'));
   tasks = [laterTask, weekTask, todayTask, late];
+  detailStatus = 200;
   detail = { ...late, rooms: [...late.rooms, { id: 'r2', name: 'Bedroom', icon: 'home' }], assigneeId: 'u2', reminderOffsets: [0, 840] };
   fetchMock.mockImplementation(defaultFetch);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -331,6 +335,22 @@ describe('task detail', () => {
     expect(screen.getByText('Kitchen, Bedroom')).toBeTruthy();
     expect(screen.getByText('At due time, The evening before')).toBeTruthy();
     expect(within(screen.getByTestId('screen-content')).getByText('Ana')).toBeTruthy();
+  });
+
+  it('shows a retryable error when the task fails to load', async () => {
+    detailStatus = 403;
+    await renderAt('/tasks/t1');
+    expect(await screen.findByText('Couldn’t load this task')).toBeTruthy();
+    detailStatus = 200;
+    await press('Try again');
+    expect(await screen.findByText('Ana · 30 Oct · late')).toBeTruthy();
+  });
+
+  it('says a missing task is not found, without a retry', async () => {
+    detailStatus = 404;
+    await renderAt('/tasks/t1');
+    expect(await screen.findByText('Couldn’t find this task')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
   });
 
   it('mutes reminders for me', async () => {

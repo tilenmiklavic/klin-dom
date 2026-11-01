@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 const mockConfig = { apiUrl: 'http://api.test', authMode: 'supabase' as const };
 jest.mock('../src/config', () => ({ getConfig: () => mockConfig }));
@@ -20,6 +20,12 @@ jest.mock('../src/auth/supabase', () => ({
     signOut: async () => {},
   },
 }));
+
+let mockClient: import('@tanstack/react-query').QueryClient;
+jest.mock('../src/data/queryClient', () => {
+  const actual = jest.requireActual('../src/data/queryClient');
+  return { ...actual, createQueryClient: () => (mockClient = actual.createQueryClient()) };
+});
 
 import * as Clipboard from 'expo-clipboard';
 import { currentHomeStore } from '../src/state/currentHome';
@@ -47,12 +53,15 @@ const catalog = {
   ],
 };
 
+let suggestionsStatus = 200;
 let homes: { id: string; name: string; role: string }[] = [];
 const created = { id: 'h-new', name: 'x', timezone: 'Europe/Ljubljana', ownerId: 'u1', role: 'owner' };
 const defaultFetch = async (url: string, init?: RequestInit) => {
   const method = init?.method ?? 'GET';
   if (url.endsWith('/me/bootstrap')) return json(200, { user, homes });
-  if (url.endsWith('/suggestions')) return json(200, catalog);
+  if (url.endsWith('/suggestions')) {
+    return suggestionsStatus === 200 ? json(200, catalog) : json(suggestionsStatus, { error: { code: 'forbidden', message: 'x' } });
+  }
   if (url.endsWith('/homes') && method === 'POST') {
     homes = [{ id: created.id, name: JSON.parse(init!.body as string).name, role: 'owner' }];
     return json(201, created);
@@ -65,6 +74,7 @@ const defaultFetch = async (url: string, init?: RequestInit) => {
     return json(200, { id: 'h-joined', name: 'Maple House', timezone: 'UTC', ownerId: 'u2', role: 'member' });
   }
   if (url.endsWith('/invites/k7q2mx')) return json(200, { homeName: 'Maple House', inviterName: 'Ana' });
+  if (url.endsWith('/invites/rawbad')) return json(404, { error: { code: 'not_found', message: 'invite row 42 not found in table invites' } });
   if (url.includes('/invites/')) return json(404, { error: { code: 'invite_not_found', message: 'This invite is no longer valid' } });
   return json(404, { error: { code: 'not_found', message: 'nope' } });
 };
@@ -86,6 +96,7 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   currentHomeStore.clear();
   homes = [];
+  suggestionsStatus = 200;
   jest.clearAllMocks();
   fetchMock.mockImplementation(defaultFetch);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -132,6 +143,26 @@ describe('create a home', () => {
     });
     await expectPath('/invite');
     expect(await AsyncStorage.getItem('klindom.currentHome')).toBe('h-new');
+  });
+
+  it('shows an error with Try again when the suggestions fail to load on the review screen', async () => {
+    await toReview();
+    suggestionsStatus = 403;
+    await act(async () => {
+      await mockClient.resetQueries({ queryKey: ['suggestions'] });
+    });
+    expect(await screen.findByText('Couldn’t load suggestions')).toBeTruthy();
+    suggestionsStatus = 200;
+    await press('Try again');
+    expect(await screen.findByRole('checkbox', { name: 'Wash the dishes' })).toBeTruthy();
+    expect(screen.queryByText('Couldn’t load suggestions')).toBeNull();
+  });
+
+  it('sends an empty draft (a reload on review) back to the first step instead of allowing a submit', async () => {
+    await renderApp('/review');
+    await expectPath('/create');
+    expect(await screen.findByLabelText('Home name')).toBeTruthy();
+    expect(calls('/homes')).toHaveLength(0);
   });
 
   it('starts from scratch without suggestions', async () => {
@@ -201,7 +232,23 @@ describe('join a home', () => {
     expect(await AsyncStorage.getItem('klindom.currentHome')).toBe('h-joined');
   });
 
-  it('shows the API message for an invalid code', async () => {
+  it('shows friendly copy, not the server text, for a not_found invite', async () => {
+    await renderApp('/join/rawbad');
+    expect(await screen.findByText('This invite is no longer valid')).toBeTruthy();
+    expect(screen.queryByText(/table invites/)).toBeNull();
+  });
+
+  it('says so when the network is down instead of showing the fetch error', async () => {
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/invites/')) throw new TypeError('Failed to fetch');
+      return defaultFetch(url, init);
+    });
+    await renderApp('/join/zzzzzz');
+    expect(await screen.findByText('Couldn’t reach KlinDom. Check your connection and try again.')).toBeTruthy();
+    expect(screen.queryByText(/Failed to fetch/)).toBeNull();
+  });
+
+  it('shows the invalid-invite copy for an invalid code', async () => {
     await renderApp('/join/zzzzzz');
     expect(await screen.findByText('This invite is no longer valid')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Join home' })).toBeNull();

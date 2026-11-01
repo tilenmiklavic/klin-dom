@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { localDate, type TaskDto } from '@klindom/shared';
 import { Button, EmptyState, Icon, KText, Ring, Screen, Sheet, tokens, useToast } from '@klindom/ui';
+import { ErrorCard } from '../../../src/components/ErrorCard';
 import { TaskSections } from '../../../src/components/tasks/TaskSections';
 import { useStatusText } from '../../../src/components/rooms/useStatusText';
 import { useHome, useMembers } from '../../../src/data/homes';
@@ -52,11 +53,22 @@ export default function RoomDetail() {
   if (!room) {
     return (
       <Screen right={<Button variant="chip" label={t('common.back')} onPress={back} />}>
-        {rooms.data ? (
+        {rooms.isError ? (
+          <ErrorCard
+            title={t('roomsTab.loadFailed')}
+            body={t('roomsTab.loadFailedBody')}
+            retrying={rooms.isFetching}
+            onRetry={() => void rooms.refetch()}
+          />
+        ) : rooms.data ? (
           <KText variant="body" color="inkMuted">
             {t('roomsTab.notFound')}
           </KText>
-        ) : null}
+        ) : (
+          <KText variant="body" color="inkMuted">
+            {t('common.loading')}
+          </KText>
+        )}
       </Screen>
     );
   }
@@ -102,9 +114,7 @@ export default function RoomDetail() {
           onSkip={setSkipping}
         />
       ) : tasks.isError ? (
-        <KText variant="body" color="inkMuted">
-          {t('tasks.loadFailedBody')}
-        </KText>
+        <ErrorCard title={t('tasks.loadFailed')} body={t('tasks.loadFailedBody')} retrying={tasks.isFetching} onRetry={() => void tasks.refetch()} />
       ) : null}
       <Button variant="secondary" label={t('roomsTab.edit')} onPress={() => router.push({ pathname: '/room-editor', params: { id: room.id } })} />
       <Sheet visible={skipping !== null} onClose={() => setSkipping(null)} title={skipping?.name ?? ''} closeLabel={t('common.close')}>

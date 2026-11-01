@@ -7,7 +7,7 @@ export interface AuthAdapter {
   /** Refreshes the session; resolves with the new access token, or null when the session is gone. */
   refresh(): Promise<string | null>;
   signInWithGoogle(): Promise<void>;
-  /** Emails a 6-digit code (creates the user when new). No magic link. */
+  /** Emails a one-time code (6–10 digits, per the Supabase project setting) (creates the user when new). No magic link. */
   sendEmailCode(email: string): Promise<void>;
   verifyEmailCode(email: string, code: string): Promise<void>;
   signOut(): Promise<void>;

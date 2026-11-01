@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { localDate, type DashboardDto, type TaskDto } from '@klindom/shared';
 import { Button, Celebration, EmptyState, KText, Screen, SegmentedControl, Sheet, tokens, useToast } from '@klindom/ui';
 import { DueList } from '../../src/components/home/DueList';
+import { ErrorCard } from '../../src/components/ErrorCard';
 import { RingsCard } from '../../src/components/home/RingsCard';
 import { useDashboard, type Scope } from '../../src/data/dashboard';
 import { useHome, useMembers } from '../../src/data/homes';
@@ -102,12 +103,8 @@ export default function Home() {
           )}
         </>
       ) : dashboard.isError ? (
-        <View style={{ alignItems: 'center', gap: tokens.space[3], padding: tokens.space[6], marginTop: tokens.space[8], borderRadius: tokens.radius.lg, backgroundColor: tokens.color.surfaceRaised }}>
-          <KText variant="heading">{t('home.loadFailed')}</KText>
-          <KText variant="body" color="inkMuted" style={{ textAlign: 'center' }}>
-            {t('home.loadFailedBody')}
-          </KText>
-          <Button label={t('common.retry')} loading={dashboard.isFetching} onPress={() => void dashboard.refetch()} />
+        <View style={{ marginTop: tokens.space[8] }}>
+          <ErrorCard title={t('home.loadFailed')} body={t('home.loadFailedBody')} retrying={dashboard.isFetching} onRetry={() => void dashboard.refetch()} />
         </View>
       ) : null}
       <Sheet visible={skipping !== null} onClose={() => setSkipping(null)} title={skipping?.name ?? ''} closeLabel={t('common.close')}>

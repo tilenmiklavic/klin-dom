@@ -1,8 +1,9 @@
 import { Switch, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { formatDue, formatInterval, localDate } from '@klindom/shared';
+import { ApiError, formatDue, formatInterval, localDate } from '@klindom/shared';
 import { Button, KText, ListGroup, ListRow, Screen, tokens } from '@klindom/ui';
+import { ErrorCard } from '../../../src/components/ErrorCard';
 import { useHome, useMembers } from '../../../src/data/homes';
 import { useMuteTask, useTask, useTaskHistory } from '../../../src/data/tasks';
 import { formatShortDate } from '../../../src/lib/time';
@@ -28,7 +29,22 @@ export default function TaskDetail() {
   if (!data) {
     return (
       <Screen right={<Button variant="chip" label={t('common.back')} onPress={back} />}>
-        {task.isError ? <KText variant="body" color="inkMuted">{t('editor.loadFailed')}</KText> : null}
+        {task.isError && task.error instanceof ApiError && task.error.status === 404 ? (
+          <KText variant="body" color="inkMuted">
+            {t('detail.notFound')}
+          </KText>
+        ) : task.isError ? (
+          <ErrorCard
+            title={t('editor.loadFailed')}
+            body={t('tasks.loadFailedBody')}
+            retrying={task.isFetching}
+            onRetry={() => void task.refetch()}
+          />
+        ) : (
+          <KText variant="body" color="inkMuted">
+            {t('common.loading')}
+          </KText>
+        )}
       </Screen>
     );
   }

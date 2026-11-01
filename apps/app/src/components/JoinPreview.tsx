@@ -1,15 +1,12 @@
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '@klindom/shared';
 import { Button, KText, Screen, tokens } from '@klindom/ui';
+import { apiErrorText } from '../errors/apiErrorText';
 import { pendingInvite } from '../auth/pendingInvite';
 import { useAcceptInvite, useInvitePreview, useRefreshBootstrap } from '../data/homes';
 import { normalizeInviteCode } from '../data/invites';
 import { useCurrentHome } from '../state/currentHome';
-
-const apiMessage = (error: unknown, fallback: string) =>
-  error instanceof ApiError && error.message ? error.message : fallback;
 
 /** Shows who invited you and to which home, then joins on confirm. Shared by the code entry and deep links. */
 export function JoinPreview({ rawCode }: { rawCode: string }) {
@@ -41,7 +38,7 @@ export function JoinPreview({ rawCode }: { rawCode: string }) {
     return (
       <Screen title={t('join.invalidTitle')}>
         <KText variant="body" color="inkMuted">
-          {apiMessage(preview.error, t('errors.generic'))}
+          {apiErrorText(t, preview.error, { invite: true })}
         </KText>
         <Button label={t('join.tryAnother')} onPress={() => void leave('code')} />
       </Screen>
@@ -57,7 +54,7 @@ export function JoinPreview({ rawCode }: { rawCode: string }) {
       </KText>
       {accept.isError ? (
         <KText variant="caption" color="brandStrong">
-          {apiMessage(accept.error, t('errors.generic'))}
+          {apiErrorText(t, accept.error, { invite: true })}
         </KText>
       ) : null}
       <View style={{ gap: tokens.space[3] }}>
