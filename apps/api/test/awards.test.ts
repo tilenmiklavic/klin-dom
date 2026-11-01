@@ -12,6 +12,8 @@ type Award = { kind: string; userId: string | null; userName: string | null };
 const dashboard = async (client: { get(p: string): Promise<Response> }, homeId: string) =>
   (await (await client.get(`/homes/${homeId}/dashboard`)).json()) as { newAwards: Award[] };
 const kinds = (a: Award[]) => a.map((x) => x.kind).sort();
+const ageHome = (homeId: string, days: number) =>
+  getTestDb().query(`update homes set created_at = $2::timestamptz - make_interval(days => $3) where id = $1`, [homeId, clock.now(), days]);
 
 it('first completion earns first_task for that user, shown once in newAwards, gone after /awards/seen', async () => {
   const { owner, homeId } = await setupHome(app);
@@ -31,6 +33,7 @@ it("another member sees household awards but not someone else's personal one", a
   const { owner, homeId } = await setupHome(app);
   const ana = await signIn(app, 'ana', 'Ana');
   await addMember(homeId, ana.id);
+  await ageHome(homeId, 8);
   const taskId = await insertTask(homeId, owner.id);
   await owner.client.post(`/tasks/${taskId}/complete`, {});
   const kindsForAna = kinds((await dashboard(ana.client, homeId)).newAwards);
@@ -46,12 +49,30 @@ it('evaluating twice inserts nothing new', async () => {
   expect(await evaluateAwards(getTestDb(), homeId, clock.now())).toBe(0);
 });
 
-it('all_fresh when every task is fresh', async () => {
+const householdAwards = () =>
+  getTestDb().query<{ kind: string }>('select kind from awards where user_id is null order by kind');
+
+it('a brand-new home is not all_fresh for doing nothing, nor after its first completion', async () => {
   const { owner, homeId } = await setupHome(app);
+  await ageHome(homeId, 0);
   await insertTask(homeId, owner.id, { nextDueDate: '2026-11-05' });
-  expect(await evaluateAwards(getTestDb(), homeId, clock.now())).toBe(1);
-  const [row] = await getTestDb().query<{ kind: string; user_id: string | null }>('select kind, user_id from awards');
-  expect(row).toEqual({ kind: 'all_fresh', user_id: null });
+  expect(await evaluateAwards(getTestDb(), homeId, clock.now())).toBe(0);
+
+  const taskId = await insertTask(homeId, owner.id);
+  expect((await owner.client.post(`/tasks/${taskId}/complete`, {})).status).toBe(201);
+  await evaluateAwards(getTestDb(), homeId, clock.now());
+  expect(await householdAwards()).toEqual([]);
+});
+
+it('all_fresh when an 8-day-old home with a completion has every task fresh', async () => {
+  const { owner, homeId } = await setupHome(app);
+  await ageHome(homeId, 8);
+  await insertTask(homeId, owner.id, { nextDueDate: '2026-11-05' });
+  expect(await evaluateAwards(getTestDb(), homeId, clock.now())).toBe(0);
+
+  const taskId = await insertTask(homeId, owner.id);
+  expect((await owner.client.post(`/tasks/${taskId}/complete`, {})).status).toBe(201);
+  expect(await householdAwards()).toEqual([{ kind: 'all_fresh' }]);
 });
 
 it("history returns the month's daily_rings and today's live ring", async () => {

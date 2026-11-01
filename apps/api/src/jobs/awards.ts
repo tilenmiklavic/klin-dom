@@ -11,10 +11,16 @@ export async function evaluateAwards(db: Db, homeId: string, now: Date): Promise
     `select user_id, count(*)::int as n from completions where home_id = $1 and kind = 'done' group by user_id`,
     [homeId],
   );
+  const [home] = await db.query<{ age_days: number }>(
+    `select floor(extract(epoch from ($2::timestamptz - created_at)) / 86400)::int as age_days from homes where id = $1`,
+    [homeId, now],
+  );
   const earned = awardsEarned({
     streak,
     rings,
     doneCountByUser: Object.fromEntries(counts.map((c) => [c.user_id, c.n])),
+    homeDoneCount: counts.reduce((sum, c) => sum + c.n, 0),
+    homeAgeDays: home?.age_days ?? 0,
   });
   let inserted = 0;
   for (const { kind, userId } of earned) {
