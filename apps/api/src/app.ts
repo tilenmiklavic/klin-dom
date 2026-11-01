@@ -10,6 +10,7 @@ import { dashboardRoutes } from './routes/dashboard.js';
 import { devRoutes } from './routes/dev.js';
 import { homeRoutes } from './routes/homes.js';
 import { inviteRoutes } from './routes/invites.js';
+import { memberRoutes } from './routes/members.js';
 import { meRoutes } from './routes/me.js';
 import { roomRoutes } from './routes/rooms.js';
 import { statsRoutes } from './routes/stats.js';
@@ -47,6 +48,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   if (deps.config.AUTH_MODE === 'dev') app.route('/', devRoutes(deps));
   app.route('/', meRoutes(deps));
   app.route('/', homeRoutes(deps));
+  app.route('/', memberRoutes(deps));
   app.route('/', inviteRoutes(deps));
   app.route('/', roomRoutes(deps));
   app.route('/', taskRoutes(deps));

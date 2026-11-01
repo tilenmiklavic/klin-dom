@@ -55,6 +55,15 @@ export interface MemberDto {
   joinedAt: string;
 }
 
+export interface MemberSettingsDto {
+  notificationsEnabled: boolean;
+  defaultReminderTime: string; // HH:mm
+}
+
+export const MemberSettingsInput = z
+  .object({ notificationsEnabled: z.boolean(), defaultReminderTime: TimeOfDay })
+  .partial();
+
 // Rooms
 
 export const iconNames = [

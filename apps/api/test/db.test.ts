@@ -42,3 +42,12 @@ it('allows two done completions for the same due date (early completions)', asyn
   await insertCompletion(taskId, 'done');
   await expect(insertCompletion(taskId, 'done')).resolves.toBeUndefined();
 });
+
+it('every table has RLS enabled', async () => {
+  const rows = await db.query<{ relname: string; relrowsecurity: boolean }>(
+    `select c.relname, c.relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relkind = 'r'`,
+  );
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.filter((r) => !r.relrowsecurity).map((r) => r.relname)).toEqual([]);
+});
